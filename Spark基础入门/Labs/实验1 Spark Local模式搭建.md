@@ -1,4 +1,4 @@
-# 实验1 Spark Local模式安装
+# 实验1 Spark Local模式搭建
 
 本实验主要是在单机环境上安装Spark，并以Local模式运行Spark。
 
@@ -8,11 +8,11 @@
 
 ## 任务1 Spark安装程序下载
 
-首先通过Spark的官方网站https://spark.apache.org/downloads.html下载Spark的安装程序。
+首先通过Spark的官方网站[https://spark.apache.org/downloads.html](https://spark.apache.org/downloads.html)下载Spark的安装程序。
 
 ![image-20220409232626566](images/image-20220409232626566.png)
 
-或者直接通过下载链接https://www.apache.org/dyn/closer.lua/spark/spark-3.2.1/spark-3.2.1-bin-hadoop3.2.tgz进行下载。
+或者直接通过下载链接[https://www.apache.org/dyn/closer.lua/spark/spark-3.2.1/spark-3.2.1-bin-hadoop3.2.tgz](https://www.apache.org/dyn/closer.lua/spark/spark-3.2.1/spark-3.2.1-bin-hadoop3.2.tgz)进行下载。
 
 将下载好的安装程序放置到softs目录下。
 

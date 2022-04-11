@@ -2,17 +2,17 @@
 
 ## Spark 安装程序下载
 
-首先通过Spark的官方网站https://spark.apache.org/downloads.html下载Spark的安装程序。
+首先通过Spark的官方网站[https://spark.apache.org/downloads.html](https://spark.apache.org/downloads.html)下载Spark的安装程序。
 
 ![image-20220409232626566](images/image-20220409232626566.png)
 
-或者直接通过下载链接https://www.apache.org/dyn/closer.lua/spark/spark-3.2.1/spark-3.2.1-bin-hadoop3.2.tgz进行下载。
+或者直接通过下载链接[https://www.apache.org/dyn/closer.lua/spark/spark-3.2.1/spark-3.2.1-bin-hadoop3.2.tgz](https://www.apache.org/dyn/closer.lua/spark/spark-3.2.1/spark-3.2.1-bin-hadoop3.2.tgz)进行下载。
 
 将下载好的安装程序放置到softs目录下。
 
 ![image-20220409233328618](images/image-20220409233328618.png)
 
-## Local 模式安装
+## Local 模式搭建
 
 ### 基本原理
 
@@ -34,7 +34,7 @@ Local 下的角色分布：
 * Driver：Local进程本身
 * Executor：不存在，没有独立的Executor角色，而是由Local进程(也就是Driver)内的线程提供计算能力
 
-> Driver也算一种特殊的Executor，只不过多数时候，我们将Executor当做纯Worker对待，这样和Driver好区分
+> Driver也算一种特殊的Executor，只不过多数时候，我们将Executor当做纯Worker对待，这样和Driver好区分  
 > 注意：Local模式只能运行一个Spark程序，如果执行多个Spark程序，那就是由多个相互独立的Local进程在执行
 
 ### 环境搭建
@@ -152,3 +152,30 @@ bin/spark-submit examples/src/main/python/pi.py 10
 | 特点     | 交互式环境，写一行执行一行                                   | 交互式环境，写一行执行一行                                   | 提交代码用                                 |
 | 使用场景 | 学习/测试/交互式验证等                                       | 学习/测试/交互式验证等                                       | 生产场景/正式场合，正式提交Spark程序运行。 |
 
+## Standalone 模式搭建
+
+### 基本架构
+
+Standalone模式是Spark自带的一种集群模式，不同于本地模式启动多个进程来模拟集群的环境，Standalone模式是真实地在多个机器之间搭建Spark集群的环境，完全可以利用该模式搭建多机器集群，用于实际的大数据处理。
+
+Standalone 是完整的Spark运行环境，其中：
+
+* Master角色以Master进程存在
+* Worker角色以Worker进程存在
+* Driver和Executor运行于Worker进程内，由Worker提供资源供给它们运行
+
+Spark架构设计将资源管理单独抽象出一层Cluster Manager，通过这种抽象能够构建一种适合企业当前技术栈的插件式资源管理模块，从而为不同的计算场景提供不同的资源分配与调度策略。
+
+![image-20220411222446909](images/image-20220411222446909.png)
+
+Cluster Manager支持：Standalone、Yarn、Mesos……
+
+Standalone集群在进程上主要有3类进程：
+
+* 主节点Master进程：Master角色，管理整个集群资源，并托管运行各个任务的Driver
+* 从节点Workers：Worker角色，管理每个机器的资源，分配对应的资源来运行Executor(Task)；每个从节点分配资源信息给Worker管理，资源信息包含内存Memory和CPU Cores核数
+* 历史服务器HistoryServer(可选)：Spark Application运行完成以后，保存事件日志数据至HDFS，启动HistoryServer可以查看应用运行相关信息
+
+### 环境搭建
+
+由于Standalone需要多台服务器，一般至少3台服务器，但是我们并没有多台服务器可用，所以环境搭建我们采用Docker容器进行搭建。具体步骤参照[实验2 Spark Standalone模式搭建](../Labs/实验2 Spark Standalone模式搭建.md)。
