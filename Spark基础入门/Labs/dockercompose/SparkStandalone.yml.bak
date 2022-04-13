@@ -1,0 +1,59 @@
+version: '3.5'
+
+services:
+  node1:
+    image: wux_labs/spark:3.2.1
+    container_name: node1
+    restart: always
+    volumes:
+      - /home/hadoop/apps:/home/hadoop/apps
+      - node1_logs:/home/hadoop/logs
+    ports:
+      - 7077:7077
+      - 8080:8080
+    networks:
+      hadoop_networks_24:
+        ipv4_address: 172.24.0.101
+
+  node2:
+    image: wux_labs/spark:3.2.1
+    container_name: node2
+    restart: always
+    volumes:
+      - /home/hadoop/apps:/home/hadoop/apps
+      - node2_logs:/home/hadoop/logs
+    networks:
+      hadoop_networks_24:
+        ipv4_address: 172.24.0.102
+
+  node3:
+    image: wux_labs/spark:3.2.1
+    container_name: node3
+    restart: always
+    volumes:
+      - /home/hadoop/apps:/home/hadoop/apps
+      - node3_logs:/home/hadoop/logs
+    networks:
+      hadoop_networks_24:
+        ipv4_address: 172.24.0.103
+
+networks:
+  hadoop_networks_24:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.24.0.0/24
+
+volumes:
+  node1_logs:
+    driver: local
+  node1_works:
+    driver: local
+  node2_logs:
+    driver: local
+  node2_works:
+    driver: local
+  node3_logs:
+    driver: local
+  node3_works:
+    driver: local
