@@ -1,0 +1,82 @@
+FROM centos:centos7.6.1810
+
+MAINTAINER wux_labs wux_labs@outlook.com
+
+# 安装sshd服务
+RUN mkdir /var/run/sshd
+
+RUN yum -y install net-tools openssl openssh-server openssh-clients which sudo
+
+RUN sed -i 's/#PermitRootLogin yes/PermitRootLogin yes/g' /etc/ssh/sshd_config
+RUN sed -i 's/#RSAAuthentication yes/RSAAuthentication yes/g' /etc/ssh/sshd_config
+RUN sed -i 's/#PubkeyAuthentication yes/PubkeyAuthentication yes/g' /etc/ssh/sshd_config
+
+RUN ssh-keygen -t dsa -f /etc/ssh/ssh_host_dsa_key
+RUN ssh-keygen -t rsa -f /etc/ssh/ssh_host_rsa_key
+RUN ssh-keygen -t ecdsa -b 256 -f /etc/ssh/ssh_host_ecdsa_key
+RUN ssh-keygen -t ed25519 -b 256 -f /etc/ssh/ssh_host_ed25519_key
+
+RUN echo "root   ALL=(ALL)     ALL" >> /etc/sudoers
+
+# 创建用户和组
+RUN groupadd hadoop
+RUN useradd -g hadoop hadoop
+
+USER hadoop
+
+# 为hadoop用户设置节点间的免密登录
+RUN ssh-keygen -t rsa -f ~/.ssh/id_rsa
+RUN cp ~/.ssh/id_rsa.pub ~/.ssh/authorized_keys
+
+# 配置环境变量
+RUN echo $'export JAVA_HOME=/home/hadoop/apps/java\n\
+export HADOOP_HOME=/home/hadoop/apps/hadoop\n\
+export HADOOP_CONF_DIR=/home/hadoop/apps/hadoop/etc/hadoop\n\
+export YARN_CONF_DIR=/home/hadoop/apps/hadoop/etc/hadoop \n\
+export SPARK_HOME=/home/hadoop/apps/spark\n\
+export PYSPARK_PYTHON=/home/hadoop/apps/anaconda3/envs/pyspark/bin/python3\n\
+export PATH=$JAVA_HOME/bin:$HADOOP_HOME/bin:$HADOOP_HOME/sbin:$SPARK_HOME/bin:$SPARK_HOME/sbin:$PATH\n\
+' >> ~/.bashrc
+
+# 配置Anaconda的初始化配置
+RUN echo "# >>> conda initialize >>>" >> ~/.bashrc
+RUN echo "# !! Contents within this block are managed by 'conda init' !!" >> ~/.bashrc
+
+RUN echo $'__conda_setup="$(\'/home/hadoop/apps/anaconda3/bin/conda\' \'shell.bash\' \'hook\' 2> /dev/null)"\n\
+if [ $? -eq 0 ]; then\n\
+    eval "$__conda_setup"\n\
+else\n\
+    if [ -f "/home/hadoop/apps/anaconda3/etc/profile.d/conda.sh" ]; then\n\
+        . "/home/hadoop/apps/anaconda3/etc/profile.d/conda.sh"\n\
+    else\n\
+        export PATH="/home/hadoop/apps/anaconda3/bin:$PATH"\n\
+    fi\n\
+fi\n\
+unset __conda_setup\
+' >> ~/.bashrc
+RUN echo "# <<< conda initialize <<<" >> ~/.bashrc
+
+# 配置Anaconda的国内加速
+RUN echo $'channels:\n\
+  - defaults\n\
+show_channel_urls: true\n\
+default_channels:\n\
+  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main\n\
+  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/r\n\
+  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/msys2\n\
+custom_channels:\n\
+  conda-forge: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud\n\
+  msys2: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud\n\
+  bioconda: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud\n\
+  menpo: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud\n\
+  pytorch: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud\n\
+  pytorch-lts: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud\n\
+  simpleitk: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud' >> ~/.condarc
+
+RUN mkdir -p ~/apps ~/logs ~/softs ~/works
+VOLUME ["/home/hadoop/apps","/home/hadoop/logs","/home/hadoop/softs","/home/hadoop/works"]
+
+USER root
+
+# 容器一运行就启动sshd服务
+CMD ["/usr/sbin/sshd","-D"]

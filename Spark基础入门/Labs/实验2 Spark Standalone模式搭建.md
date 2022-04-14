@@ -397,7 +397,7 @@ scala> sc.parallelize(List(1,2,3,4,5)).map(x => x * 2).collect()
 
 ### 步骤3 测试 spark-submit
 
-我们在宿主机上执行 spark-submit ，此时，与 Local 模式不同，我们需要指定 --master 选项，以让 pyspark 连接到集群环境。
+我们在宿主机上执行 spark-submit ，此时，与 Local 模式不同，我们需要指定 --master 选项，以让 spark-submit 连接到集群环境。
 
 ```
 bin/spark-submit --master spark://node1:7077 --class org.apache.spark.examples.SparkPi examples/jars/spark-examples_2.12-3.2.1.jar 10

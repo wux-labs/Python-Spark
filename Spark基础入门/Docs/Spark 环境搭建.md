@@ -154,7 +154,7 @@ bin/spark-submit examples/src/main/python/pi.py 10
 
 ## Standalone 模式搭建
 
-### 基本架构
+### 基本原理
 
 Standalone模式是Spark自带的一种集群模式，不同于本地模式启动多个进程来模拟集群的环境，Standalone模式是真实地在多个机器之间搭建Spark集群的环境，完全可以利用该模式搭建多机器集群，用于实际的大数据处理。
 
@@ -349,3 +349,45 @@ bin/pyspark --master spark://node1:7077
 ![image-20220414101320257](images/image-20220414101320257.png)
 
 完整安装的 Linux 系统，默认会自带 Python2 的环境，并且我们自己还安装了 Python3，所以本地不会报错。但是 Docker 环境并没有自带的 Python 环境，所以需要我们自己安装，但是前面的所有步骤都未涉及到 Python 环境的安装。这个问题我们放在后面来解决。
+
+## Spark on Yarn 模式搭建
+
+过在企业中，服务器的资源总是紧张的，许多企业基本上都有Hadoop集群，也就是有Yarn集群。在已有Yarn集群的前提下再单独准备Spark Standalone集群，对资源的利用就不高。所以，多数场景下会将Spark运行到Yarn集群上。
+
+### 基本原理
+
+Yarn本身是一个资源调度框架，负责对运行在内部的计算框架进行资源调度管理。作为典型的计算框架，Spark本身也可以直接运行在Yarn中，并接受Yarn的调度的。所以，对于Spark on Yarn，无需部署Spark集群，只要找一台服务器充当Spark的客户端，即可提交任务到Yarn集群中运行。
+
+Spark On Yarn的本质
+
+* Master角色由Yarn的ResourceManager担任
+* Worker角色由Yarn的NodeManager担任
+* Driver角色运行在Yarn容器内 或 提交任务的客户端进程中
+* Executor运行在Yarn提供的容器内
+
+Spark On Yarn需要啥
+
+* 需要Yarn集群
+* 需要Spark客户端工具，比如spark-submit，可以将Spark程序提交到Yarn中
+
+### 环境搭建
+
+首先我们需要安装Hadoop集群、启动HDFS、启动Yarn。
+
+由于Spark on Yarn不需要启动Spark集群，而是在接收到客户端请求后由Yarn进行资源分配并启动程序，所以需要Yarn的每个节点都能访问到Spark的依赖库，所以最好是每个Yarn节点上都放置Spark的安装程序。
+
+由于pyspark的运行要依赖于Python3的环境，所以每个节点都需要安装Python3。
+
+我们依然采样Docker容器、目录挂载的方式来搭建Spark on Yarn环境。这次我们使用5台服务器，即使用5个Docker容器来进行搭建，并且需要保证5个容器在同一个网络内。
+
+| 容器名称 | 容器IP       |
+| -------- | ------------ |
+| node1    | 172.24.0.101 |
+| node2    | 172.24.0.102 |
+| node3    | 172.24.0.103 |
+| node4    | 172.24.0.104 |
+| node5    | 172.24.0.105 |
+
+我们在宿主机本地安装 Python3（使用Anaconda）、Hadoop，并配置Hadoop的配置文件，并且需要在Spark的配置文件中配置HADOOP_CONF_DIR和YARN_CONF_DIR，其余的配置可以不要。
+
+具体步骤参照[实验3 Spark on Yarn模式搭建](../Labs/实验3 Spark on Yarn模式搭建.md)。
