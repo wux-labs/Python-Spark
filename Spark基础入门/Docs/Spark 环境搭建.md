@@ -178,4 +178,174 @@ Standalone集群在进程上主要有3类进程：
 
 ### 环境搭建
 
-由于Standalone需要多台服务器，一般至少3台服务器，但是我们并没有多台服务器可用，所以环境搭建我们采用Docker容器进行搭建。具体步骤参照[实验2 Spark Standalone模式搭建](../Labs/实验2 Spark Standalone模式搭建.md)。
+由于Standalone需要多台服务器，一般至少3台服务器，但是我们并没有多台服务器可用，所以环境搭建我们采用Docker容器进行搭建。我们采用3个Docker容器进行集群搭建，并且需要保证3个容器在同一个网络内。
+
+| 容器名称 | 容器IP       |
+| -------- | ------------ |
+| node1    | 172.24.0.101 |
+| node2    | 172.24.0.102 |
+| node3    | 172.24.0.103 |
+
+Standalone 集群的搭建，需要完成以下配置文件的配置：
+
+`conf/workers` ：
+
+```
+node1
+node2
+node3
+```
+
+`conf/spark-env.sh`：
+
+```
+# 设置 Java 安装目录
+JAVA_HOME=/home/hadoop/apps/java
+
+# 指定 Spark Master 的 IP 和提交任务的通信端口
+# 告知 Spark Master运行在哪个机器上
+SPARK_MASTER_HOST=node1
+# 告知 Spark Master 的通讯端口
+SPARK_MASTER_PORT=7077
+# 告知 Spark Master 的 WebUI 端口
+SPARK_MASTER_WEBUI_PORT=8080
+
+# 指定 Spark 的日志存放路径
+SPARK_LOG_DIR=/home/hadoop/logs/spark
+# 指定 Spark 的工作路径
+SPARK_WORKER_DIR=/home/hadoop/works/spark
+```
+
+集群的启动我们使用 `start-all.sh` 命令。
+
+具体步骤参照[实验2 Spark Standalone模式搭建](../Labs/实验2 Spark Standalone模式搭建.md)。
+
+### 环境验证
+
+#### 测试Master Web UI
+
+我们在浏览器中访问我们配置的端口，就可以打开 Web UI 了。
+
+![image-20220413184204366](images/image-20220413184204366.png)
+
+#### 测试spark-shell
+
+我们在宿主机上执行 spark-shell ，此时，与 Local 模式不同，我们需要指定 --master 选项，以让 spark-shell 连接到集群环境。
+
+```
+cd /home/hadoop/apps/spark
+
+bin/spark-shell --master spark://node1:7077
+```
+
+![image-20220414091826199](images/image-20220414091826199.png)
+
+可以看到，在 Local 模式下，master = local[*]，而在 Standalone 集群模式下，master = spark://node1:7077。并且我们可以在 Master Web UI 界面看到我们的应用。
+
+![image-20220414092235437](images/image-20220414092235437.png)
+
+我们运行一段代码
+
+```
+scala> sc.parallelize(List(1,2,3,4,5)).map(x => x * 2).collect()
+```
+
+![image-20220414092745210](images/image-20220414092745210.png)
+
+通过点击 Master Web UI 界面的 Application ID 可以跳转到应用的界面。
+
+![image-20220414093054941](images/image-20220414093054941.png)
+
+在这里，我们可以看到总共有3个 Executor。
+
+![image-20220414093250655](images/image-20220414093250655.png)
+
+点击界面上的 Application Detail UI，可以跳转到端口为 4040 的监控界面。
+
+![image-20220414093514786](images/image-20220414093514786.png)
+
+在监控界面，我们可以看到刚才运行的代码的详细信息、DAG图等。
+
+![image-20220414093446297](images/image-20220414093446297.png)
+
+在 Executors 界面，我们可以看到，除了 driver，还有另外 3 个 Executor 存在。
+
+![image-20220414093920069](images/image-20220414093920069.png)
+
+从图中可以看到Spark Application运行到集群上时，由两部分组成：Driver Program和Executors。
+
+**Driver Program**
+
+* 相当于AppMaster，整个应用管理者，负责应用中所有Job的调度执行
+* 运行JVM Process，运行程序的main函数，必须创建SparkContext上下文对象
+* 一个Spark Application仅有一个Driver
+
+**Executors**
+
+* 相当于一个线程池，运行JVM Process，其中有很多线程，每个线程运行一个Task任务，一个Task任务运行需要1 Core CPU，所以可以认为Executor中线程数就等于CPU Core核数
+* 一个Spark Application可以有多个Executor，可以设置个数和资源信息
+
+用户程序从最开始的提交到最终的计算执行，需要经历以下几个阶段： 
+
+* 用户程序创建 SparkContext 时，新创建的 SparkContext 实例会连接到 ClusterManager。 ClusterManager 会根据用户提交时设置的 CPU 和内存等信息为本次提交分配计算资源，启动 Executor
+* Driver会将用户程序划分为不同的执行阶段，每个执行阶段由一组Task组成，这些Task分别作用于待处理数据的不同分区。在阶段划分完成和Task创建后，Driver会向Executor发送Task
+* Executor在接收到Task后，会下载Task的运行时依赖，在准备好Task的执行环境后，会开始执行Task，并且将Task的运行状态汇报给Driver
+* Driver会根据收到的Task的运行状态来处理不同的状态更新。 Task分为两种：
+  * Shuffle Map Task，它实现数据的重新Shuffle，Shuffle的结果保存到Executor所在节点的文件系统中
+  * Result Task，它负责生成结果数据
+* Driver会不断地调用Task，将Task发送到Executor执行，在所有的Task都正确执行或者超过执行次数的限制仍然没有执行成功时停止
+
+Spark Application程序运行时三个核心概念：Job、Stage、 Task
+
+* Job：由多个Task的并行计算部分，一般Spark中的action操作，会生成一个Job
+* Stage：Job的组成单位，一个Job会切分成多个Stage，Stage彼此之间相互依赖顺序执行，而每个Stage是多个Task的集合，类似map和reduce
+* Task：被分配到各个Executor的单位工作内容，它是Spark中的最小执行单位，一般来说有多少个Paritition，就会有多少个Task，每个Task只会处理单个Paritition上的数据
+
+前面我们接触到的监控页面，有4040，有8080。
+
+* 4040 是一个运行的Application在运行的过程中临时绑定的端口，用以查看当前任务的状态，当前程序运行完成后，4040就会被注销
+* 8080 是Standalone模式下Master的Web端口，用以查看当前Master(集群)的状态
+
+#### 测试 spark-submit
+
+我们在宿主机上执行 spark-submit ，此时，与 Local 模式不同，我们需要指定 --master 选项，以让 pyspark 连接到集群环境。
+
+```
+bin/spark-submit --master spark://node1:7077 --class org.apache.spark.examples.SparkPi examples/jars/spark-examples_2.12-3.2.1.jar 10
+```
+
+![image-20220414100001150](images/image-20220414100001150.png)
+
+可以看到，在 Local 模式下，master = local[*]，而在 Standalone 集群模式下，master = spark://node1:7077。并且我们可以在 Master Web UI 界面看到我们的应用。
+
+![image-20220414100115740](images/image-20220414100115740.png)
+
+#### 测试 pyspark
+
+我们在宿主机上执行 pyspark ，此时，与 Local 模式不同，我们需要指定 --master 选项，以让 pyspark 连接到集群环境。
+
+```
+bin/pyspark --master spark://node1:7077
+```
+
+![image-20220414094335692](images/image-20220414094335692.png)
+
+可以看到，在 Local 模式下，master = local[*]，而在 Standalone 集群模式下，master = spark://node1:7077。并且我们可以在 Master Web UI 界面看到我们的应用。
+
+![image-20220414094446170](images/image-20220414094446170.png)
+
+我们执行一段代码。
+
+```
+>>> sc.parallelize([1,2,3,4,5]).map(lambda x: x + 1).collect()
+```
+
+![image-20220414094935853](images/image-20220414094935853.png)
+
+通过代码运行，我们可以看到，报错了！
+
+因为 pyspark 会依赖 Python 环境，但是我们的3个 Docker 容器内并没有安装 Python 环境，所以无法进行执行。而在 Local 模式下，由于是在宿主机本地执行，而宿主机是安装了 Python 的，所以 Local 模式并没有导致报错。
+
+![image-20220414101320257](images/image-20220414101320257.png)
+
+完整安装的 Linux 系统，默认会自带 Python2 的环境，并且我们自己还安装了 Python3，所以本地不会报错。但是 Docker 环境并没有自带的 Python 环境，所以需要我们自己安装，但是前面的所有步骤都未涉及到 Python 环境的安装。这个问题我们放在后面来解决。

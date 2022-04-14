@@ -12,11 +12,11 @@
 
 本次实验采用3个Docker容器进行集群搭建，并且需要保证3个容器在同一个网络内。
 
-| 容器名称 | 容器IP |
-| -------- | ------ |
-| node1    |        |
-| node2    |        |
-| node3    |        |
+| 容器名称 | 容器IP       |
+| -------- | ------------ |
+| node1    | 172.24.0.101 |
+| node2    | 172.24.0.102 |
+| node3    | 172.24.0.103 |
 
 ## 任务1 Docker 镜像制作
 
@@ -345,8 +345,96 @@ jps
 
 ## 任务4 测试 Spark Standalone 模式
 
-### 步骤1 测试 Spark Web UI
+### 步骤1 测试 Master Web UI
 
 我们在浏览器中访问我们配置的端口，就可以打开 Web UI 了。
 
 ![image-20220413184204366](images/image-20220413184204366.png)
+
+### 步骤2 测试 spark-shell
+
+我们在宿主机上执行 spark-shell ，此时，与 Local 模式不同，我们需要指定 --master 选项，以让 spark-shell 连接到集群环境。
+
+```
+cd /home/hadoop/apps/spark
+
+bin/spark-shell --master spark://node1:7077
+```
+
+![image-20220414091826199](images/image-20220414091826199.png)
+
+可以看到，在 Local 模式下，master = local[*]，而在 Standalone 集群模式下，master = spark://node1:7077。并且我们可以在 Master Web UI 界面看到我们的应用。
+
+![image-20220414092235437](images/image-20220414092235437.png)
+
+我们运行一段代码
+
+```
+scala> sc.parallelize(List(1,2,3,4,5)).map(x => x * 2).collect()
+```
+
+![image-20220414092745210](images/image-20220414092745210.png)
+
+通过点击 Master Web UI 界面的 Application ID 可以跳转到应用的界面。
+
+![image-20220414093054941](images/image-20220414093054941.png)
+
+在这里，我们可以看到总共有3个 Executor。
+
+![image-20220414093250655](images/image-20220414093250655.png)
+
+点击界面上的 Application Detail UI，可以跳转到端口为 4040 的监控界面。
+
+![image-20220414093514786](images/image-20220414093514786.png)
+
+在监控界面，我们可以看到刚才运行的代码的详细信息、DAG图等。
+
+![image-20220414093446297](images/image-20220414093446297.png)
+
+在 Executors 界面，我们可以看到，除了 driver，还有另外 3 个 Executor 存在。
+
+![image-20220414093920069](images/image-20220414093920069.png)
+
+### 步骤3 测试 spark-submit
+
+我们在宿主机上执行 spark-submit ，此时，与 Local 模式不同，我们需要指定 --master 选项，以让 pyspark 连接到集群环境。
+
+```
+bin/spark-submit --master spark://node1:7077 --class org.apache.spark.examples.SparkPi examples/jars/spark-examples_2.12-3.2.1.jar 10
+```
+
+![image-20220414100001150](images/image-20220414100001150.png)
+
+可以看到，在 Local 模式下，master = local[*]，而在 Standalone 集群模式下，master = spark://node1:7077。并且我们可以在 Master Web UI 界面看到我们的应用。
+
+![image-20220414100115740](images/image-20220414100115740.png)
+
+### 步骤4 测试 pyspark
+
+我们在宿主机上执行 pyspark ，此时，与 Local 模式不同，我们需要指定 --master 选项，以让 pyspark 连接到集群环境。
+
+```
+bin/pyspark --master spark://node1:7077
+```
+
+![image-20220414094335692](images/image-20220414094335692.png)
+
+可以看到，在 Local 模式下，master = local[*]，而在 Standalone 集群模式下，master = spark://node1:7077。并且我们可以在 Master Web UI 界面看到我们的应用。
+
+![image-20220414094446170](images/image-20220414094446170.png)
+
+我们执行一段代码。
+
+```
+>>> sc.parallelize([1,2,3,4,5]).map(lambda x: x + 1).collect()
+```
+
+![image-20220414094935853](images/image-20220414094935853.png)
+
+通过代码运行，我们可以看到，报错了！
+
+因为 pyspark 会依赖 Python 环境，但是我们的3个 Docker 容器内并没有安装 Python 环境，所以无法进行执行。而在 Local 模式下，由于是在宿主机本地执行，而宿主机是安装了 Python 的，所以 Local 模式并没有导致报错。
+
+![image-20220414101320257](images/image-20220414101320257.png)
+
+完整安装的 Linux 系统，默认会自带 Python 2 的环境，并且我们自己还安装了 Python3，所以本地不会报错。但是 Docker 环境并没有自带的 Python 环境，所以需要我们自己安装，但是前面的所有步骤都未涉及到 Python 环境的安装。这个问题我们放在后面来解决。
