@@ -390,4 +390,132 @@ Spark On Yarn需要啥
 
 我们在宿主机本地安装 Python3（使用Anaconda）、Hadoop，并配置Hadoop的配置文件，并且需要在Spark的配置文件中配置HADOOP_CONF_DIR和YARN_CONF_DIR，其余的配置可以不要。
 
+宿主机作为客户机，需要将环境变量设置为与容器中的环境变量一致。
+
 具体步骤参照[实验3 Spark on Yarn模式搭建](../Labs/实验3 Spark on Yarn模式搭建.md)。
+
+### 环境验证
+
+#### 测试 HDFS
+
+我们在Hadoop的配置文件中，没有指定HDFS的Web端口，Hadoop 3默认使用的是9870，并且我们已经映射到了宿主机。打开浏览器看看。
+
+![image-20220414171511682](images/image-20220414171511682.png)
+
+#### 测试 Yarn
+
+我们可以通过端口 8088 打开Yarn的Web UI。
+
+![image-20220414172325153](images/image-20220414172325153.png)
+
+#### 测试 spark-shell
+
+我们在宿主机上执行 spark-shell ，此时，我们需要指定 --master 选项，以让 spark-shell 连接到集群环境。
+
+```
+cd /home/hadoop/apps/spark
+
+bin/spark-shell --master yarn --deploy-mode client
+```
+
+![image-20220414172941535](images/image-20220414172941535.png)
+
+在Yarn的界面，我们可以看到提交的程序。
+
+![image-20220414173420333](images/image-20220414173420333.png)
+
+我们运行一段代码
+
+```
+scala> sc.parallelize(List(1,2,3,4,5)).map(x => x * 2).collect()
+```
+
+![image-20220414092745210](images/image-20220414092745210-16499496547491.png)
+
+#### 测试 spark-submit
+
+我们在宿主机上执行 spark-submit ，此时，我们需要指定 --master 选项，以让 spark-submit 连接到集群环境。
+
+##### Client 模式
+
+在执行时指定 `--deploy-mode client`
+
+```
+bin/spark-submit --master yarn --deploy-mode client --class org.apache.spark.examples.SparkPi examples/jars/spark-examples_2.12-3.2.1.jar 10
+```
+
+我们可以在 Yarn 的 Web UI 界面看到我们的应用。
+
+![image-20220414180101486](images/image-20220414180101486.png)
+
+##### Cluster 模式
+
+在执行时指定 `--deploy-mode cluster`
+
+```
+bin/spark-submit --master yarn --deploy-mode cluster --class org.apache.spark.examples.SparkPi examples/jars/spark-examples_2.12-3.2.1.jar 10
+```
+
+通过Yarn Web UI还是可以看到我们的应用的。
+
+![image-20220414181801398](images/image-20220414181801398.png)
+
+#### 测试 pyspark
+
+我们在宿主机上执行 pyspark ，此时，我们需要指定 --master 选项，以让 pyspark 连接到集群环境。
+
+```
+bin/pyspark --master yarn --deploy-mode client
+```
+
+![image-20220414182831496](images/image-20220414182831496.png)
+
+我们可以在 Yarn Web UI 界面看到我们的应用。
+
+![image-20220414182932794](images/image-20220414182932794.png)
+
+我们执行一段代码。
+
+```
+>>> sc.parallelize([1,2,3,4,5]).map(lambda x: x + 1).collect()
+```
+
+![image-20220414231328585](images/image-20220414231328585.png)
+
+### 部署模式DeployMode
+
+Spark on Yarn是有两种运行模式的：
+
+* 一种是Cluster模式
+* 一种是Client模式。
+
+这两种模式的区别就是Driver运行的位置：
+
+* Cluster模式：Driver运行在Yarn容器内部，和ApplicationMaster在同一个容器内
+* Client模式：Driver运行在客户端进程中，比如Driver运行在spark-submit程序的进程中
+
+从前面的验证过程，我们可以看到，在Spark on Yarn模式下：
+
+* spark-submit程序既可以使用Client模式，也可以使用Cluster模式
+* 但是：spark-shell和pyspark，因为是交互式运行的，所以只支持Client模式，不支持Cluster模式
+
+两种模式的区别：
+
+|                | Cluster模式                  | Client模式                               |
+| -------------- | ---------------------------- | ---------------------------------------- |
+| Driver运行位置 | Yarn容器内                   | 客户端进程内                             |
+| 通讯效率       | 高                           | 低于Cluster模式                          |
+| 日志查看       | 日志输出在容器内, 查看不方便 | 日志输出在客户端的标准输出流中，方便查看 |
+| 生产可用       | 推荐                         | 不推荐                                   |
+| 稳定性         | 稳定                         | 基于客户端进程，受到客户端进程影响       |
+
+Client模式和Cluster模式最最本质的区别是：Driver程序运行在哪里。 
+
+* Client模式：学习测试时使用，生产不推荐(要用也可以，性能略低，稳定性略低) 
+  * Driver运行在Client上，和集群的通信成本高
+  * Driver输出结果会在客户端显示
+* Cluster模式：生产环境中使用该模式
+  * Driver程序在Yarn集群中，和集群的通信成本低
+  * Driver输出结果不能在客户端显示
+  * 该模式下Driver运行ApplicattionMaster这个节点上，由Yarn管理，如果出现问题，Yarn会重启 ApplicattionMaster(Driver)
+

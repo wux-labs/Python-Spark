@@ -59,6 +59,8 @@ ln -s hadoop-3.3.2 hadoop
 ```
 export JAVA_HOME=/home/hadoop/apps/java
 export HADOOP_HOME=/home/hadoop/apps/hadoop
+export HADOOP_CONF_DIR=/home/hadoop/apps/hadoop/etc/hadoop
+export YARN_CONF_DIR=/home/hadoop/apps/hadoop/etc/hadoop
 export SPARK_HOME=/home/hadoop/apps/spark
 export PATH=$JAVA_HOME/bin:$HADOOP_HOME/bin:$HADOOP_HOME/sbin:$SPARK_HOME/bin:$SPARK_HOME/sbin:$PATH
 ```
@@ -330,6 +332,28 @@ pip install pyspark pyhive pymysql jieba -i https://pypi.tuna.tsinghua.edu.cn/si
 ```
 
 ![image-20220414160525934](images/image-20220414160525934.png)
+
+### 步骤4 配置环境变量
+
+在 `.bashrc` 文件中配置环境变量 `PYSPARK_PYTHON`，指向可执行的Python环境。
+
+> 因为在 pyspark 命令中，存在代码
+>
+> if [[ -z "$PYSPARK_PYTHON" ]]; then
+>   PYSPARK_PYTHON=python3
+> fi
+>
+> 如果不配置这个变量PYSPARK_PYTHON，就会默认使用python3作为执行命令，恰好如果系统中没有安装Python3，则会出现实验2中最后一个报错的情况。
+
+```
+export JAVA_HOME=/home/hadoop/apps/java
+export HADOOP_HOME=/home/hadoop/apps/hadoop
+export HADOOP_CONF_DIR=/home/hadoop/apps/hadoop/etc/hadoop
+export YARN_CONF_DIR=/home/hadoop/apps/hadoop/etc/hadoop 
+export SPARK_HOME=/home/hadoop/apps/spark
+export PYSPARK_PYTHON=/home/hadoop/apps/anaconda3/envs/pyspark/bin/python3
+export PATH=$JAVA_HOME/bin:$HADOOP_HOME/bin:$HADOOP_HOME/sbin:$SPARK_HOME/bin:$SPARK_HOME/sbin:$PATH
+```
 
 ## 任务3 Docker 镜像制作
 
@@ -694,7 +718,7 @@ scala> sc.parallelize(List(1,2,3,4,5)).map(x => x * 2).collect()
 >
 > 所以，我们只能尽量让宿主机或node1作为Driver，并且只能查看宿主机或node1的日志。
 
-### 步骤3 测试 spark-submit
+### 步骤4 测试 spark-submit
 
 我们在宿主机上执行 spark-submit ，此时，我们需要指定 --master 选项，以让 spark-submit 连接到集群环境。
 
@@ -750,7 +774,7 @@ bin/spark-submit --master yarn --deploy-mode cluster --class org.apache.spark.ex
 
 ![image-20220414182436926](images/image-20220414182436926.png)
 
-### 步骤4 测试 pyspark
+### 步骤5 测试 pyspark
 
 我们在宿主机上执行 pyspark ，此时，我们需要指定 --master 选项，以让 pyspark 连接到集群环境。
 
@@ -769,4 +793,8 @@ bin/pyspark --master yarn --deploy-mode client
 ```
 >>> sc.parallelize([1,2,3,4,5]).map(lambda x: x + 1).collect()
 ```
+
+![image-20220414231328585](images/image-20220414231328585.png)
+
+可以看到，代码成功运行了。
 
