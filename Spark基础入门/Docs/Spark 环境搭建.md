@@ -430,7 +430,7 @@ bin/spark-shell --master yarn --deploy-mode client
 scala> sc.parallelize(List(1,2,3,4,5)).map(x => x * 2).collect()
 ```
 
-![image-20220414092745210](images/image-20220414092745210-16499496547491.png)
+![image-20220414092745210](images/image-20220414092745210.png)
 
 #### 测试 spark-submit
 
