@@ -519,3 +519,155 @@ Client模式和Cluster模式最最本质的区别是：Driver程序运行在哪�
   * Driver输出结果不能在客户端显示
   * 该模式下Driver运行ApplicattionMaster这个节点上，由Yarn管理，如果出现问题，Yarn会重启 ApplicattionMaster(Driver)
 
+#### 两种模式详细流程
+
+##### Client 模式
+
+在Yarn Client模式下，Driver在任务提交的本地机器上运行（客户端，案例中的宿主机）。
+
+1. Driver在任务提交的本地机器上运行，Driver启动后会和ResourceManager通讯申请启动ApplicationMaster
+2. ResourceManager分配Container，在合适的NodeManager上启动ApplicationMaster，此时的ApplicationMaster的功能相当于一个ExecutorLaucher，只负责向ResourceManager申请Executor内存
+3. ResourceManager接到ApplicationMaster的资源申请后会分配Container，然后ApplicationMaster在资源分配指定的NodeManager上启动Executor进程
+4. Executor进程启动后会向Driver反向注册，Executor全部注册完成后Driver开始执行main函数
+5. 之后执行到Action算子时，触发一个Job，并根据宽窄依赖开始划分Stage，每个Stage生成对应的TaskSet，之后将Task分发到各个Executor上执行
+
+##### Cluster 模式
+
+在Yarn Cluster模式下，Driver运行在NodeManager Container中，此时Driver与ApplicationMaster合为一体。
+
+1. 任务提交后会和ResourceManager通讯申请启动ApplicationMaster
+2. 随后ResourceManager分配Container，在合适的NodeManager上启动ApplicationMaster，此时的ApplicationMaster就是Driver
+3. Driver启动后向ResourceManager申请Executor内存，ResourceManager接到ApplicationMaster的资源申请后会分配Container，然后在合适的NodeManager上启动Executor进程
+4. Executor进程启动后会向Driver反向注册
+5. Executor全部注册完成后Driver开始执行main函数，之后执行到Action算子时，触发一个Job，并根据宽窄依赖开始划分Stage，每个Stage生成对应的TaskSet，之后将Task分发到各个Executor上执行
+
+## 本机开发环境搭建
+
+前面完成了服务器的运行环境搭建，下面来看看本机开发环境如何搭建，毕竟代码需要先在本机开发才能提交到服务器运行。
+
+### PyCharm 安装
+
+PyCharm是一种Python IDE（Integrated Development Environment，集成开发环境），带有一整套可以帮助用户在使用Python语言开发时提高其效率的工具，比如调试、语法高亮、项目管理、代码跳转、智能提示、自动完成、单元测试、版本控制等。因此我们使用PyCharm来进行相关程序的开发。
+
+根据自身情况，自行下载[https://www.jetbrains.com/pycharm/download/#section=windows](https://www.jetbrains.com/pycharm/download/#section=windows)相应的版本，完成安装。
+
+### 创建项目并配置运行环境
+
+打开刚安装好的PyCharm，通过点击Projects -> New Project 来进行项目的创建。
+
+![image-20220418092809961](images/image-20220418092809961.png)
+
+选择Pure Python项目，设置Location，在设置Python虚拟环境的地方我们选择新建一个。
+
+![image-20220418093155927](images/image-20220418093155927.png)
+
+在配置项目的Python运行环境时，我们除了在本地安装Python外，还可以直接使用远程Linux服务器上的Python环境及解释器等。
+
+### 开发测试
+
+#### Local 模式运行
+
+我们开发一段代码来进行环境测试。
+
+```python
+from pyspark import SparkConf, SparkContext
+
+if __name__ == '__main__':
+    conf = SparkConf().setAppName("EnvTest").setMaster("local[*]")
+    sc = SparkContext(conf=conf)
+    print(sc.parallelize([1, 2, 3, 4, 5]).map(lambda x: x + 1).collect())
+```
+
+然后，右键运行。
+
+![image-20220418102056321](images/image-20220418102056321.png)
+
+#### Yarn 模式运行
+
+修改代码，设置master=yarn来试试。
+
+```python
+from pyspark import SparkConf, SparkContext
+
+if __name__ == '__main__':
+    conf = SparkConf().setAppName("EnvTest").setMaster("yarn")
+    sc = SparkContext(conf=conf)
+    print(sc.parallelize([1, 2, 3, 4, 5]).map(lambda x: x + 1).collect())
+```
+
+然后右键运行。
+
+![image-20220418103055197](images/image-20220418103055197.png)
+
+#### WordCount 案例
+
+接下来我们来看看如何访问HDFS上的文件。
+
+> 由于我们的宿主机跟Docker的环境配置完全一致，并且宿主机可以直接连接Docker容器，所以直接把宿主机当Hadoop的客户端，直接执行相关命令即可。
+
+首先我们创建一个文件`word.txt`
+
+```
+Hello World
+Hello Python
+Hello Spark
+Python Spark
+PySpark
+wux labs pyspark
+```
+
+然后将文件上传到HDFS的input目录下。
+
+![image-20220418105853589](images/image-20220418105853589.png)
+
+接下来开发一段WordCount代码。
+
+```python
+from pyspark import SparkConf, SparkContext
+
+if __name__ == '__main__':
+    print('PySpark WordCount Program')
+    # TODO: 当应用运行在集群上的时候，MAIN函数就是Driver Program，必须创建SparkContext对象
+    # 创建SparkConf对象，设置应用的配置信息，比如应用名称和应用运行模式
+    conf = SparkConf().setAppName("WordCount").setMaster("yarn")
+    # TODO: 构建SparkContext上下文实例对象，读取数据和调度Job执行
+    sc = SparkContext(conf=conf)
+    # 第一步、读取本地数据 封装到RDD集合，认为列表List
+    wordsRDD = sc.textFile("hdfs://node1:8020/input/word.txt")
+    # 第二步、处理数据 调用RDD中函数，认为调用列表中的函数
+    # a. 每行数据分割为单词
+    flatMapRDD = wordsRDD.flatMap(lambda line: line.split(" "))
+    # b. 转换为二元组，表示每个单词出现一次
+    mapRDD = flatMapRDD.map(lambda x: (x, 1))
+    # c. 按照Key分组聚合
+    resultRDD = mapRDD.reduceByKey(lambda a, b: a + b)
+    # 第三步、输出数据
+    print(resultRDD.collect())
+    # 输出到本地文件中
+    resultRDD.saveAsTextFile("hdfs://node1:8020/output/count")
+    print('停止 PySpark SparkSession 对象')
+    # 关闭SparkContext
+    sc.stop()
+```
+
+然后运行。
+
+![image-20220418110203630](images/image-20220418110203630.png)
+
+#### 本地调试程序
+
+我们修改一下程序的输出路径，然后给代码打几个断点，右键进行Debug。
+
+![image-20220418111349031](images/image-20220418111349031.png)
+
+### 总结
+
+安装好Linux服务器上的环境之后，本机开发环境可以不用安装Python，直接使用远程Linux上的环境运行即可。这有几点好处：
+
+* 开发环境与运行环境完全保持一致，可避免Windows与Linux版本差异导致的一些Bug
+* 可以直接将本机开发的程序运行在yarn上，直接就是基于yarn环境在进行开发，最大程度的将开发与生产环境保持一致
+* 可以直接调试代码，并且是基于yarn运行环境在进行代码调试
+
+当然这种方式也有一些要求：
+
+* 本机需要随时与远程Linux保持连接，一旦连接断开，本地代码无法运行
