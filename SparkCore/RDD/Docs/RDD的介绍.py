@@ -1,6 +1,6 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # 第1章 RDD的介绍
+# MAGIC # RDD的介绍
 
 # COMMAND ----------
 
@@ -12,12 +12,12 @@
 
 # COMMAND ----------
 
-# MAGIC %run "../../initialization"
+# MAGIC %run "../../../initialization"
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## 1.1 为什么需要RDD
+# MAGIC ## 为什么需要RDD
 # MAGIC 分布式计算需要
 # MAGIC * 分区控制
 # MAGIC * Shuffle控制
@@ -32,7 +32,7 @@
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## 1.2 什么是RDD
+# MAGIC ## 什么是RDD
 # MAGIC RDD(Resilient Distributed Dataset)叫做弹性分布式数据集，是Spark中最基本的数据抽象，代表一个不可变、可分区、元素可并行计算的集合。
 # MAGIC 
 # MAGIC * Dataset：一个数据集合，用于存放数据的。
@@ -57,6 +57,16 @@
 # COMMAND ----------
 
 # MAGIC %scala
+# MAGIC /**
+# MAGIC  * Internally, each RDD is characterized by five main properties:
+# MAGIC  *
+# MAGIC  *  - A list of partitions
+# MAGIC  *  - A function for computing each split
+# MAGIC  *  - A list of dependencies on other RDDs
+# MAGIC  *  - Optionally, a Partitioner for key-value RDDs (e.g. to say that the RDD is hash-partitioned)
+# MAGIC  *  - Optionally, a list of preferred locations to compute each split on (e.g. block locations for
+# MAGIC  *    an HDFS file)
+# MAGIC  */
 # MAGIC abstract class RDD[T: ClassTag](
 # MAGIC     @transient private var _sc: SparkContext,
 # MAGIC     @transient private var deps: Seq[Dependency[_]]
@@ -67,7 +77,7 @@
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## 1.3 RDD的五大特性
+# MAGIC ## RDD的五大特性
 # MAGIC 
 # MAGIC RDD 数据结构内部有五个特性（摘录RDD 源码）：前三个特征每个RDD都具备的，后两个特征可选的。
 # MAGIC 
@@ -82,7 +92,7 @@
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### 特性1 RDD是有分区的
+# MAGIC ### RDD是有分区的
 # MAGIC 
 # MAGIC - A list of partitions
 # MAGIC 
@@ -91,14 +101,14 @@
 
 # COMMAND ----------
 
-rdd = sc.parallelize([1,2,3,4,5,6,7,8,9],5)
+rdd = sc.parallelize([0, 1,2,3,4,5,6,7,8,9],5)
 print("RDD的分区数：",rdd.getNumPartitions())
 print("RDD的分区情况：",rdd.glom().collect())
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### 特性2 计算方法都会作用到每个分区上
+# MAGIC ### 计算方法都会作用到每个分区上
 # MAGIC 
 # MAGIC - A function for computing each split
 # MAGIC 
@@ -112,7 +122,7 @@ rdd.glom().collect()
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### 特性3 RDD之间是有依赖关系的
+# MAGIC ### RDD之间是有依赖关系的
 # MAGIC 
 # MAGIC - A list of dependencies on other RDDs
 # MAGIC 
@@ -121,7 +131,7 @@ rdd.glom().collect()
 
 # COMMAND ----------
 
-rdd1 = sc.textFile(dfs_endpoint + "/input/WordCount.txt")
+rdd1 = sc.textFile(dfs_endpoint + "/Words.txt")
 rdd2 = rdd1.flatMap(lambda x: x.split(" "))
 rdd3 = rdd2.map(lambda x: (x, 1))
 rdd4 = rdd3.reduceByKey(lambda a, b: a + b)
@@ -130,7 +140,7 @@ rdd4.collect()
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### 特性4 Key-Value型的RDD可以有分区器
+# MAGIC ### Key-Value型的RDD可以有分区器
 # MAGIC 
 # MAGIC - Optionally, a Partitioner for key-value RDDs (e.g. to say that the RDD is hash-partitioned)
 # MAGIC 
@@ -141,8 +151,40 @@ rdd4.collect()
 
 # COMMAND ----------
 
+rdd = sc.parallelize([0,1,2,3,4,5,6,7,8,9],3).map(lambda x: (x, x % 4))
+print(rdd.glom().collect(), rdd.partitioner)
+
+rdd2 = rdd.partitionBy(3)
+print(rdd2.glom().collect(), rdd2.partitioner)
+
+rdd3 = rdd.partitionBy(3, lambda x: x % 3)
+print(rdd3.glom().collect(), rdd3.partitioner)
+
+rdd4 = rdd.partitionBy(3, lambda x: x % 2)
+print(rdd4.glom().collect(), rdd4.partitioner)
+
+# COMMAND ----------
+
+# MAGIC %scala
+# MAGIC import org.apache.spark.HashPartitioner
+# MAGIC import org.apache.spark.RangePartitioner
+# MAGIC 
+# MAGIC val rdd = sc.parallelize(List(0,1,2,3,4,5,6,7,8,9),3).map(x => (x, x))
+# MAGIC rdd.glom().collect().foreach(x => println(x.mkString(",")))
+# MAGIC println(rdd.partitioner)
+# MAGIC 
+# MAGIC val rdd2 = rdd.partitionBy(new HashPartitioner(4))
+# MAGIC rdd2.glom().collect().foreach(x => println(x.mkString(",")))
+# MAGIC println(rdd2.partitioner)
+# MAGIC 
+# MAGIC val rdd3 = rdd.partitionBy(new RangePartitioner(4, rdd))
+# MAGIC rdd3.glom().collect().foreach(x => println(x.mkString(",")))
+# MAGIC println(rdd3.partitioner)
+
+# COMMAND ----------
+
 # MAGIC %md
-# MAGIC ### 特性5 RDD的分区规划，会尽量靠近数据所在的服务器
+# MAGIC ### RDD的分区规划，会尽量靠近数据所在的服务器
 # MAGIC 
 # MAGIC - Optionally, a list of preferred locations to compute each split on (e.g. block locations for an HDFS file)
 # MAGIC 

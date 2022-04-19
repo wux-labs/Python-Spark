@@ -4,9 +4,9 @@
 
 # COMMAND ----------
 
-blob_account_name = "databricksstorage01"
-blob_container_name = "databrickscontainer01"
-blob_sas_token = r"sas_token"
+blob_account_name = "databricksaccount1"
+blob_container_name = "databrickscontainer1"
+blob_sas_token = r"sp=racwdli&st=2022-04-19T02:46:25Z&se=2022-04-27T10:46:25Z&sv=2020-08-04&sr=c&sig=D7DTvuhpU%2FUhw9%2FZe%2B1Ppn8pOpcKnBSdjpmPQt9Fyqk%3D"
 
 wasbs_endpoint = 'wasbs://%s@%s.blob.core.windows.net' % (blob_container_name, blob_account_name)
 spark.conf.set('fs.azure.sas.%s.%s.blob.core.windows.net' % (blob_container_name, blob_account_name), blob_sas_token)
