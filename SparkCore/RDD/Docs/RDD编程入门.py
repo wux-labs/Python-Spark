@@ -168,7 +168,7 @@ print(rdd.collect())
 
 # COMMAND ----------
 
-rdd = sc.parallelize([0, 1,2,3,4,5,6,7,8,9])
+rdd = sc.parallelize([0,1,2,3,4,5,6,7,8,9])
 
 # 定义func
 def map_func(data):
@@ -209,9 +209,27 @@ print(rdd.flatMap(lambda x: x.split(" ")).collect())
 # COMMAND ----------
 
 # MAGIC %md
+# MAGIC #### mapValues 算子
+# MAGIC 
+# MAGIC mapValues算子，**针对K-V型RDD**，对二元组的Value执行map操作。
+# MAGIC 
+# MAGIC 语法：
+# MAGIC ```
+# MAGIC rdd.mapValues(func)
+# MAGIC ```
+
+# COMMAND ----------
+
+rdd = sc.parallelize([("a", 1),("b", 1), ("a", 2), ("b", 2), ("a", 3)])
+print(rdd.collect())
+print(rdd.mapValues(lambda x: x * 2).collect())
+
+# COMMAND ----------
+
+# MAGIC %md
 # MAGIC #### reduceByKey 算子
 # MAGIC 
-# MAGIC reduceByKey算子，针对K-V型RDD，自动按照K分组，然后根据提供的聚合逻辑，完成组内数据的聚合操作。
+# MAGIC reduceByKey算子，**针对K-V型RDD**，自动按照K分组，然后根据提供的聚合逻辑，完成组内数据的聚合操作。
 # MAGIC 
 # MAGIC 语法：
 # MAGIC ```
@@ -304,7 +322,7 @@ print(rdd.groupBy(lambda x: "group {}".format(x % 3)).map(lambda x: (x[0], list(
 # MAGIC %md
 # MAGIC #### groupByKey 算子
 # MAGIC 
-# MAGIC groupByKey算子，针对K-V型RDD，自动按照K分组。
+# MAGIC groupByKey算子，**针对K-V型RDD**，自动按照K分组。
 # MAGIC 
 # MAGIC 语法：
 # MAGIC ```
@@ -463,7 +481,7 @@ print(rdd.sortBy(lambda x: x % 3, False, 3).collect())
 # MAGIC %md
 # MAGIC #### sortByKey 算子
 # MAGIC 
-# MAGIC sortByKey算子，针对K-V型RDD，按照K对RDD的数据进行排序。
+# MAGIC sortByKey算子，**针对K-V型RDD**，按照K对RDD的数据进行排序。
 # MAGIC 
 # MAGIC 语法：
 # MAGIC ```
@@ -482,6 +500,182 @@ rdd = sc.parallelize([("a", 1), ("b", 1), ("a", 3), ("c", 4), ("b", 2), ("a", 2)
 print(rdd.sortByKey().collect())
 print(rdd.sortByKey(False).collect())
 print(rdd.sortByKey(False, 2).collect())
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### zip 算子
+# MAGIC 
+# MAGIC zip算子，将两个RDD的元素一一对应地组成一个二元组的RDD，就像拉链一样。
+# MAGIC 
+# MAGIC 语法：
+# MAGIC ```
+# MAGIC rdd.zip(other)
+# MAGIC 
+# MAGIC # other：需要做拉链的另一个RDD
+# MAGIC ```
+# MAGIC 
+# MAGIC > Can only zip with RDD which has the same number of partitions  
+# MAGIC Can only zip RDDs with same number of elements in each partition  
+# MAGIC 需要确保做zip的两个RDD的元素个数相同。  
+# MAGIC 即便是用Scala编写的Spark代码也要注意，确保两个RDD的元素个数相同，这一点与Scala的List的zip不同。
+
+# COMMAND ----------
+
+rdd = sc.parallelize([1,2,3,4])
+
+# Can only zip with RDD which has the same number of partitions
+# Can only zip RDDs with same number of elements in each partition
+# print(rdd.zip(sc.parallelize(["a","b","c"],3)).collect())
+# print(rdd.zip(sc.parallelize(["a","b","c","d","e"],5)).collect())
+print(rdd.zip(sc.parallelize(["a","b","c","d"])).collect())
+
+# COMMAND ----------
+
+# MAGIC %scala
+# MAGIC val list1 = List(1,2,3,4)
+# MAGIC val list2 = List("a","b","c")
+# MAGIC val list3 = List("a","b","c","d","e")
+# MAGIC println(list1.zip(list2))
+# MAGIC println(list1.zip(list3))
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### zipWithIndex 算子
+# MAGIC 
+# MAGIC zipWithIndex算子，将RDD的元素与每个元素对应的索引进行zip。
+# MAGIC 
+# MAGIC 语法：
+# MAGIC ```
+# MAGIC rdd.zipWithIndex()
+# MAGIC ```
+
+# COMMAND ----------
+
+rdd = sc.parallelize(["a","b","c","d"])
+
+print(rdd.zipWithIndex().collect())
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### zipWithUniqueId 算子
+# MAGIC 
+# MAGIC zipWithUniqueId算子，将RDD的元素与不重复的ID进行zip。
+# MAGIC 
+# MAGIC 语法：
+# MAGIC ```
+# MAGIC rdd.zipWithUniqueId()
+# MAGIC ```
+
+# COMMAND ----------
+
+rdd = sc.parallelize(["a","b","c","d","e","f"])
+
+print(rdd.zipWithUniqueId().collect())
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### partitionBy 算子
+# MAGIC 
+# MAGIC partitionBy算子，**针对K-V型RDD**，根据K对RDD进行自定义分区操作。
+# MAGIC 
+# MAGIC 语法：
+# MAGIC ```
+# MAGIC rdd.partitionBy(numPartitions, partitionFunc)
+# MAGIC 
+# MAGIC # numPartitions：重新分区后的分区数
+# MAGIC # partitionFunc：自定义分区规则，返回的是整数类型的分区编号，取值范围: [0, numPartitions - 1]，返回值不在这个取值范围的，默认都放0分区
+# MAGIC ```
+
+# COMMAND ----------
+
+rdd = sc.parallelize(["a","b","c","d","e","f"]).zipWithIndex()
+
+print(rdd.glom().collect())
+
+def partition_func(key):
+    if key <= "c": return 1
+    if key <= "e": return 2
+    return 0
+
+print(rdd.partitionBy(3,partition_func).glom().collect())
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### repartition 算子
+# MAGIC 
+# MAGIC repartition算子，对RDD的分区执行重新分区。
+# MAGIC 
+# MAGIC 语法：
+# MAGIC ```
+# MAGIC rdd.repartition(numPartitions)
+# MAGIC 
+# MAGIC # numPartitions：重新分区后的分区数
+# MAGIC ```
+# MAGIC 
+# MAGIC > 重分区采用的是：合并小分区、增加空分区的方式进行操作的。
+# MAGIC 
+# MAGIC > **注意：**  对分区的数量进行操作一定要慎重。  
+# MAGIC > 一般情况下，除了要求全局排序设置为1个分区外，多数时候我们都不需要重新分区。  
+# MAGIC > 如果改变了分区，可能会影响**并行计算**，还可能导致shuffle。
+
+# COMMAND ----------
+
+rdd = sc.parallelize(["a","b","c","d","e","f"])
+
+print(rdd.glom().collect())
+print(rdd.repartition(2).glom().collect())
+print(rdd.repartition(9).glom().collect())
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### coalesce 算子
+# MAGIC 
+# MAGIC coalesce算子，对分区数量进行增减。
+# MAGIC 
+# MAGIC 语法：
+# MAGIC ```
+# MAGIC rdd.coalesce(numPartitions, shuffle=False)
+# MAGIC 
+# MAGIC # numPartitions：重新分区后的分区数
+# MAGIC # shuffle：表示是否允许shuffle，增加分区数会导致shuffle
+# MAGIC ```
+
+# COMMAND ----------
+
+rdd = sc.parallelize(["a","b","c","d","e","f"])
+
+print(rdd.glom().collect())
+print(rdd.coalesce(2).glom().collect())
+print(rdd.coalesce(6).glom().collect())
+print(rdd.coalesce(6, True).glom().collect())
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### mapPartitions 算子
+# MAGIC 
+# MAGIC mapPartitions算子，和map一致，对RDD执行指定的逻辑操作，一次处理一整个分区。
+# MAGIC 
+# MAGIC 语法：
+# MAGIC ```
+# MAGIC rdd.mapPartitions(func, preservesPartitioning=False)
+# MAGIC 
+# MAGIC # func：处理函数，由于每次处理的是一整个分区的数据，处理的是迭代数据，返回值也要求是可迭代的数据
+# MAGIC ```
+
+# COMMAND ----------
+
+rdd = sc.parallelize([1,2,3,4,5,6,7,8,9])
+
+print(rdd.glom().collect())
+print(rdd.map(lambda x: (type(x), x)).glom().collect())
+print(rdd.mapPartitions(lambda x: [type(x)]).glom().collect())
 
 # COMMAND ----------
 
@@ -515,3 +709,314 @@ print(totalRdd.collect())
 print(totalRdd.sortByKey().collect())
 # 统计结果按销售额排序
 print(totalRdd.sortBy(lambda x: x[1]).collect())
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### 常用的Action算子
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### collect 算子
+# MAGIC 
+# MAGIC collect算子，将RDD各个分区内的数据，统一收集到Driver中，形成List对象。
+# MAGIC 
+# MAGIC 语法：
+# MAGIC ```
+# MAGIC rdd.collect()
+# MAGIC ```
+# MAGIC 
+# MAGIC > 这个算子，是将RDD各个分区的数据都拉取到Driver中  
+# MAGIC RDD是分布式对象，其数据可能很大，所以用这个算子之前，需要了解RDD的数据，确保数据集不会太大，否则会吧Driver的内存撑爆。
+
+# COMMAND ----------
+
+rdd = sc.parallelize([0,1,2,0,1,2,0,2,2,0], 2)
+print(rdd)
+print(rdd.collect())
+print(rdd.glom().collect())
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### countByKey 算子
+# MAGIC 
+# MAGIC countByKey算子，**针对K-V型RDD**，统计K出现的次数。
+# MAGIC 
+# MAGIC 语法：
+# MAGIC ```
+# MAGIC rdd.countByKey()
+# MAGIC ```
+
+# COMMAND ----------
+
+rdd = sc.parallelize([("a", 1), ("b", 1), ("a", 3), ("c", 4), ("b", 2), ("a", 2)])
+
+print(rdd.countByKey())
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### reduce 算子
+# MAGIC 
+# MAGIC reduce算子，对RDD数据集按照指定的逻辑进行聚合。
+# MAGIC 
+# MAGIC 语法：
+# MAGIC ```
+# MAGIC rdd.reduce(func)
+# MAGIC 
+# MAGIC # func：(T, T) -> T
+# MAGIC # 接收两个参数，返回一个返回值，要求参数与返回值的类型相同
+# MAGIC ```
+
+# COMMAND ----------
+
+rdd = sc.parallelize(range(1,101),1)
+
+print(rdd.reduce(lambda a,b: a + b))
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### fold 算子
+# MAGIC 
+# MAGIC fold算子，使用一个初始值，对RDD数据集按照指定的逻辑进行聚合。
+# MAGIC 
+# MAGIC 语法：
+# MAGIC ```
+# MAGIC rdd.fold(zeroValue, func)
+# MAGIC 
+# MAGIC # zeroValue：T，初始值
+# MAGIC # func：(T, T) -> T
+# MAGIC # 初始值、函数的参数、函数的返回值，类型相同
+# MAGIC ```
+# MAGIC 
+# MAGIC > **注意：** fold的初始值，会同时作用在  
+# MAGIC > * 分区内聚合
+# MAGIC > * 分区间聚合
+# MAGIC > * 即便只有1个分区，也会将初始值作用在分区上
+
+# COMMAND ----------
+
+# 当有1个分区时：初始值 + 分区1的聚合结果（初始值 + 分区元素的聚合结果） = 5 + (5 + 5050) = 5060
+print(sc.parallelize(range(1,101),1).fold(5, lambda a,b: a + b))
+# 当有2个分区时：(x1 + x2 = 5050)
+# 初始值 + 分区1的聚合结果（初始值 + 分区元素的聚合结果） + 分区2的聚合结果（初始值 + 分区元素的聚合结果） = 5 + (5 + x1) + (5 + x2) = 5065
+print(sc.parallelize(range(1,101),2).fold(5, lambda a,b: a + b))
+# 当有3个分区时：(x1 + x2 + x3 = 5050)
+# 初始值 + 分区1的聚合结果（初始值 + 分区元素的聚合结果） + 分区2的聚合结果（初始值 + 分区元素的聚合结果） + 分区3的聚合结果（初始值 + 分区元素的聚合结果） = 5 + (5 + x1) + (5 + x2) + (5 + x3) = 5070
+print(sc.parallelize(range(1,101),3).fold(5, lambda a,b: a + b))
+# 由于我们的CPU是4个，所以默认是4个分区，结果就是 5075
+print(sc.parallelize(range(1,101)).fold(5, lambda a,b: a + b))
+# 分区数每增加1个，最终聚合的结果就增加一个初始值
+
+# COMMAND ----------
+
+print(sc.parallelize(["a","b","c"],1).fold("f", lambda a,b: a + b))
+print(sc.parallelize(["a","b","c"],2).fold("f", lambda a,b: a + b))
+print(sc.parallelize(["a","b","c"],3).fold("f", lambda a,b: a + b))
+print(sc.parallelize(["a","b","c"]).fold("f", lambda a,b: a + b))
+print(sc.parallelize(["a","b","c"],50).fold("f", lambda a,b: a + b))
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### first 算子
+# MAGIC 
+# MAGIC first算子，取出RDD中的第一个元素。
+# MAGIC 
+# MAGIC 语法：
+# MAGIC ```
+# MAGIC rdd.first()
+# MAGIC ```
+
+# COMMAND ----------
+
+print(sc.parallelize(["a","b","c"],1).first())
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### take 算子
+# MAGIC 
+# MAGIC take算子，取出RDD中的前N个元素。
+# MAGIC 
+# MAGIC 语法：
+# MAGIC ```
+# MAGIC rdd.take(N)
+# MAGIC 
+# MAGIC # N：需要取出的元素个数
+# MAGIC ```
+
+# COMMAND ----------
+
+print(sc.parallelize(["a","b","c","e","f","g"],1).take(3))
+print(sc.parallelize(["a","b","c","e","f","g"],2).glom().collect(), sc.parallelize(["a","b","c","e","f","g"],2).take(3))
+print(sc.parallelize(["a","b","c","e","f","g"],3).glom().collect(), sc.parallelize(["a","b","c","e","f","g"],3).take(3))
+print(sc.parallelize(["a","b","c","e","f","g"],4).glom().collect(), sc.parallelize(["a","b","c","e","f","g"],4).take(3))
+print(sc.parallelize(["a","b","c","e","f","g"],5).glom().collect(), sc.parallelize(["a","b","c","e","f","g"],5).take(3))
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### top 算子
+# MAGIC 
+# MAGIC top算子，对RDD中的元素进行降序排序，然后取出前N个元素。
+# MAGIC 
+# MAGIC 语法：
+# MAGIC ```
+# MAGIC rdd.top(N)
+# MAGIC 
+# MAGIC # N：需要取出的元素个数
+# MAGIC ```
+
+# COMMAND ----------
+
+print(sc.parallelize(["a","b","c","e","f","g"],1).top(3))
+print(sc.parallelize(["a","b","c","e","f","g"],2).glom().collect(), sc.parallelize(["a","b","c","e","f","g"],2).top(3))
+print(sc.parallelize(["a","b","c","e","f","g"],3).glom().collect(), sc.parallelize(["a","b","c","e","f","g"],3).top(3))
+print(sc.parallelize(["a","b","c","e","f","g"],4).glom().collect(), sc.parallelize(["a","b","c","e","f","g"],4).top(3))
+print(sc.parallelize(["a","b","c","e","f","g"],5).glom().collect(), sc.parallelize(["a","b","c","e","f","g"],5).top(3))
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### takeSample 算子
+# MAGIC 
+# MAGIC takeSample算子，随机抽样RDD的数据。
+# MAGIC 
+# MAGIC 语法：
+# MAGIC ```
+# MAGIC rdd.takeSample(withReplacement, num, seed=None)
+# MAGIC 
+# MAGIC # withReplacement：是否允许数据重复，True表示可以多次取同一个数据，False表示不可以取同一个数据
+# MAGIC # num：抽样数目
+# MAGIC # seed：随机数种子
+# MAGIC ```
+# MAGIC 
+# MAGIC > 随机数种子数字可以随便传，相同随机数种子取出的结果是一致的。一般我们不给定这个参数，由Spark自己给定。
+
+# COMMAND ----------
+
+# 允许多次抽取同一个元素
+print(sc.parallelize(["a","b","c","e","f","g"],1).takeSample(True,5))
+# 不允许多次抽取同一个元素，但每次抽取的结果可能是不一样的
+print(sc.parallelize(["a","b","c","e","f","g"],1).takeSample(False,5))
+print(sc.parallelize(["a","b","c","e","f","g"],1).takeSample(False,5))
+print(sc.parallelize(["a","b","c","e","f","g"],1).takeSample(False,5))
+# 指定随机数种子后，每次抽取的结果是一致的
+print(sc.parallelize(["a","b","c","e","f","g"],1).takeSample(False,5, 5))
+print(sc.parallelize(["a","b","c","e","f","g"],1).takeSample(False,5, 5))
+print(sc.parallelize(["a","b","c","e","f","g"],1).takeSample(False,5, 5))
+print(sc.parallelize(["a","b","c","e","f","g"],1).takeSample(False,5, 5))
+# 不同的随机数种子，抽取的结果是不一样的
+print(sc.parallelize(["a","b","c","e","f","g"],1).takeSample(False,5, 4))
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### takeOrdered 算子
+# MAGIC 
+# MAGIC takeOrdered算子，对RDD进行排序，然后取出前N个元素，与top类似，只是可以自己指定排序规则。
+# MAGIC 
+# MAGIC 语法：
+# MAGIC ```
+# MAGIC rdd.takeSample(num, key=None)
+# MAGIC 
+# MAGIC # num：抽样数目
+# MAGIC # key：排序数据
+# MAGIC ```
+
+# COMMAND ----------
+
+print(sc.parallelize(["aaa","bbbbb","cccc","eee","ff","g"],1).top(3))
+print(sc.parallelize(["aaa","bbbbb","cccc","eee","ff","g"],1).takeOrdered(3, lambda x: -len(x)))
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### foreach 算子
+# MAGIC 
+# MAGIC foreach算子，对RDD每一个元素，执行指定的逻辑操作，这个算子没有返回值。
+# MAGIC 
+# MAGIC 语法：
+# MAGIC ```
+# MAGIC rdd.foreach(func)
+# MAGIC 
+# MAGIC # func: (T) -> None
+# MAGIC ```
+
+# COMMAND ----------
+
+print(sc.parallelize(range(1,11),1).map(lambda x: x * 2))
+print(sc.parallelize(range(1,11),1).map(lambda x: x * 2).collect())
+print(sc.parallelize(range(1,11),1).foreach(lambda x: x * 2))
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### foreachPartition 算子
+# MAGIC 
+# MAGIC foreachPartition算子，和foreach一致，对RDD每一个元素，执行指定的逻辑操作，一次处理一整个分区，这个算子没有返回值。
+# MAGIC 
+# MAGIC 语法：
+# MAGIC ```
+# MAGIC rdd.foreachPartition(func)
+# MAGIC 
+# MAGIC # func: (T) -> None
+# MAGIC ```
+
+# COMMAND ----------
+
+rdd = sc.parallelize(range(1,11),3)
+print(rdd.glom().collect())
+rdd.foreach(lambda x: print(x, type(x)))
+rdd.foreachPartition(lambda x: print(type(x), list(x)))
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### saveAsText 算子
+# MAGIC 
+# MAGIC saveAsText算子，将RDD的数据写入文本文件中。支持写到本地、分布式文件系统等，每个分区写一个子文件。
+# MAGIC 
+# MAGIC 语法：
+# MAGIC ```
+# MAGIC rdd.saveAsTextFile(path,compressionCodecClass=None)
+# MAGIC 
+# MAGIC # path: 文件的写出路径
+# MAGIC # compressionCodecClass：压缩类
+# MAGIC ```
+
+# COMMAND ----------
+
+rdd1 = sc.parallelize(["a","b","c","e","f","g"],1)
+print(rdd1.glom().collect())
+rdd1.saveAsTextFile("/mnt/databrickscontainer1/partition1")
+
+rdd2 = sc.parallelize(["a","b","c","e","f","g"],2)
+print(rdd2.glom().collect())
+rdd2.saveAsTextFile("/mnt/databrickscontainer1/partition2")
+
+rdd3 = sc.parallelize(["a","b","c","e","f","g"],3)
+print(rdd3.glom().collect())
+rdd3.saveAsTextFile("/mnt/databrickscontainer1/partition3")
+
+rdd4 = sc.parallelize(["a","b","c","e","f","g"],4)
+print(rdd4.glom().collect())
+rdd4.saveAsTextFile("/mnt/databrickscontainer1/partition4")
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### 注意
+# MAGIC 
+# MAGIC 在前面的Action算子中，有几个算子：
+# MAGIC * foreach
+# MAGIC * foreachPartition
+# MAGIC * saveAsText
+# MAGIC 
+# MAGIC 这几个算子无返回值，是分区直接执行的，跳过Driver，由Executor直接执行。
+# MAGIC 
+# MAGIC 其他算子有返回值，都会将执行结果发送到Driver。
