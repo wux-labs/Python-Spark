@@ -212,6 +212,20 @@ print(result5)
 # MAGIC 
 # MAGIC 如果数据量小，或者RDD重新计算是非常快的，用CheckPoint就没啥必要，直接缓存就可以了。
 # MAGIC 
+# MAGIC ```
+# MAGIC     def checkpoint(self):
+# MAGIC         """
+# MAGIC         Mark this RDD for checkpointing. It will be saved to a file inside the
+# MAGIC         checkpoint directory set with :meth:`SparkContext.setCheckpointDir` and
+# MAGIC         all references to its parent RDDs will be removed. This function must
+# MAGIC         be called before any job has been executed on this RDD. It is strongly
+# MAGIC         recommended that this RDD is persisted in memory, otherwise saving it
+# MAGIC         on a file will require recomputation.
+# MAGIC         """
+# MAGIC         self.is_checkpointed = True
+# MAGIC         self._jrdd.rdd().checkpoint()
+# MAGIC ```
+# MAGIC 
 # MAGIC **CheckPoint需要放在对应RDD的Action之前，对RDD才有持久化的效果，放在Action之后，即便后续还有RDD上的Action操作，CheckPoint也不起作用；缓存会对缓存语句后面的Action起作用。**
 # MAGIC 
 # MAGIC 其他RDD的Action对当前RDD的CheckPoint没有影响。
@@ -236,7 +250,7 @@ rdd3 = rdd2.map(lambda x: (x[0], x[1], datetime.datetime.now().strftime("%Y-%m-%
 
 # 放在Action之前，看看后续RDD的Action的结果，体会一下Cache与CheckPoint的持久化效果
 # rdd3.cache()
-# rdd3.checkpoint()
+rdd3.checkpoint()
 
 time.sleep(5)
 result1 = rdd3.collect()
@@ -245,7 +259,7 @@ print(result1)
 print(result1)
 
 # 放在Action之后，看看后续RDD的Action的结果，体会一下Cache与CheckPoint的持久化效果
-rdd3.cache()
+# rdd3.cache()
 # rdd3.checkpoint()
 
 time.sleep(5)
