@@ -404,3 +404,355 @@ df.show(truncate=False)
 # COMMAND ----------
 
 spark.read.format("jdbc").option("url","jdbc:mysql://wux-mysql.mysql.database.azure.com:3306/spark?useSSL=true&requireSSL=false").option("user","wux_labs@wux-mysql").option("password","Pa55w.rd").option("query","select * from spark_mysql_test").load().show()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## DataFrame的入门操作
+# MAGIC 
+# MAGIC DataFrame支持两种风格进行编程，分别是：
+# MAGIC * DSL风格
+# MAGIC * SQL风格
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### DSL语法风格
+# MAGIC 
+# MAGIC DSL称之为：**领域特定语言**，其实就是指DataFrame的特有API。
+# MAGIC 
+# MAGIC DSL风格意思就是以调用API的方式来处理数据，比如：df.select().where().limit()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### printSchema
+# MAGIC 
+# MAGIC 功能：打印输出DataFrame的schema信息。
+# MAGIC 
+# MAGIC 语法：  
+# MAGIC df.printSchema()
+
+# COMMAND ----------
+
+df = spark.read.format("csv").load("/mnt/databrickscontainer1/restaurant-1-orders.csv", header=True)
+
+df.printSchema()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### show
+# MAGIC 
+# MAGIC 功能：展示DataFrame中的数据，默认展示20条。
+# MAGIC 
+# MAGIC 语法：  
+# MAGIC df.show(参数1, 参数2)
+# MAGIC * 参数1：默认是20, 控制展示多少条
+# MAGIC * 参数2：是否截断列的数据，默认只输出20个字符的长度，过长不显示，要显示的话需要指定 truncate = False。
+
+# COMMAND ----------
+
+df = spark.read.format("text").load("/mnt/databrickscontainer1/restaurant-1-orders.csv")
+
+df.show()
+df.show(truncate=False)
+df.show(5, truncate=False)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### select
+# MAGIC 
+# MAGIC 功能：选择DataFrame中的指定列（通过传入参数进行指定）。
+# MAGIC 
+# MAGIC 语法：  
+# MAGIC df.select(\*cols)
+# MAGIC 
+# MAGIC 可传递：
+# MAGIC * 可变参数的cols对象，cols对象可以是Column对象来指定列或者字符串列名来指定列。
+# MAGIC * List[Column]对象或者List[str]对象，用来选择多个列。
+
+# COMMAND ----------
+
+df = spark.read.format("csv").load("/mnt/databrickscontainer1/restaurant-1-orders.csv", header=True)
+
+# 使用可变参数的Column对象
+df.select(df["Order Number"], df["Order Date"]).show()
+# 使用List[Column]对象
+df.select([df["Order Number"], df["Order Date"], df["Item Name"]]).show()
+# 使用List[str]对象
+df.select(["Order Number", "Order Date", "Item Name", "Quantity"]).show()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### distinct
+# MAGIC 
+# MAGIC 功能：返回不包含重复数据的新的DataFrame。
+# MAGIC 
+# MAGIC 语法：  
+# MAGIC df.distinct()
+
+# COMMAND ----------
+
+df = spark.read.format("csv").load("/mnt/databrickscontainer1/restaurant-1-orders.csv", header=True)
+
+df.select(df["Order Number"]).distinct().show()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### filter和where
+# MAGIC 
+# MAGIC 功能：过滤DataFrame内的数据，返回一个过滤后的DataFrame。
+# MAGIC 
+# MAGIC 语法：  
+# MAGIC df.filter()  
+# MAGIC df.where()
+# MAGIC 
+# MAGIC > where和filter在功能上是等价的。
+
+# COMMAND ----------
+
+df = spark.read.format("csv").load("/mnt/databrickscontainer1/restaurant-1-orders.csv", header=True)
+
+df.filter("Quantity > 30").show()
+df.filter(df["Quantity"] > 30).show()
+
+df.where("Quantity > 30").show()
+df.where(df["Quantity"] > 30).show()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### groupBy
+# MAGIC 
+# MAGIC 功能：按照指定的列进行数据的分组，返回值是**GroupedData对象**。
+# MAGIC 
+# MAGIC 语法：  
+# MAGIC df.groupBy()
+# MAGIC 
+# MAGIC > 传入参数和select一样，支持多种形式。
+
+# COMMAND ----------
+
+df = spark.read.format("csv").load("/mnt/databrickscontainer1/restaurant-1-orders.csv", header=True)
+
+df.groupBy("Quantity").count().show()
+df.groupBy("Item Name").count().show()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ##### GroupedData对象
+# MAGIC 
+# MAGIC GroupedData对象是一个特殊的DataFrame数据集，其类全名：<class 'pyspark.sql.group.GroupedData'>。
+# MAGIC 
+# MAGIC 这个对象是经过groupBy后得到的返回值，内部记录了以分组形式存储的数据。
+# MAGIC 
+# MAGIC GroupedData对象有很多API，比如前面的count方法就是这个对象的内置方法，除此之外，像：min、max、avg、sum、等等许多方法都存在。
+
+# COMMAND ----------
+
+df = spark.read.format("jdbc").option("url","jdbc:mysql://wux-mysql.mysql.database.azure.com:3306/spark?useSSL=true&requireSSL=false").option("user","wux_labs@wux-mysql").option("password","Pa55w.rd").option("query","select * from spark_mysql_test").load()
+
+df.printSchema()
+df.show()
+
+# 类全名：<class 'pyspark.sql.group.GroupedData'>
+print(type(df.groupBy("Quantity")))
+
+df.groupBy("Quantity").count().show()
+df.groupBy("Item_Name").min().show()
+df.groupBy("Item_Name").max().show()
+df.groupBy("Item_Name").sum().show()
+df.groupBy("Item_Name").avg().show()
+
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### orderBy
+# MAGIC 
+# MAGIC 功能：对DataFrame的数据进行排序。
+# MAGIC 
+# MAGIC 语法：  
+# MAGIC df.orderBy(\*cols, \*kwargs)  
+# MAGIC * cols：排序的列。
+# MAGIC * kwargs：排序参数，用于指定是顺序排序还是倒序排序，接受boolean或List(boolean)。如果是List，则元素个数应该与cols的元素个数相同。
+
+# COMMAND ----------
+
+df = spark.read.format("csv").load("/mnt/databrickscontainer1/restaurant-1-orders.csv", header=True)
+
+df.show()
+
+df.orderBy(df["Item Name"]).show()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### limit
+# MAGIC 
+# MAGIC 功能：限制返回的记录数。
+# MAGIC 
+# MAGIC 语法：  
+# MAGIC df.limit(num)
+# MAGIC * num：指定限制返回的记录数
+
+# COMMAND ----------
+
+df = spark.read.format("csv").load("/mnt/databrickscontainer1/restaurant-1-orders.csv", header=True)
+
+df.show()
+df.limit(5).show()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### SQL语法风格
+# MAGIC 
+# MAGIC SQL风格就是使用SQL语句处理DataFrame的数据，比如：spark.sql("SELECT * FROM xxx")
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### 注册DataFrame成为表
+# MAGIC 
+# MAGIC DataFrame的一个强大之处就是我们可以将它看作是一个关系型数据表，然后可以通过在程序中使用spark.sql()来执行SQL语句查询，结果返回一个DataFrame。
+# MAGIC 
+# MAGIC 如果想使用SQL风格的语法，需要将DataFrame注册成表，采用如下的方式：
+# MAGIC ```
+# MAGIC df.createTempView()                注册一个临时表，如果表已存在则报错
+# MAGIC df.createOrReplaceTempView()       注册一个临时表，如果存在则进行替换
+# MAGIC df.createGlobalTempView()          注册一个全局表，如果表已存在则报错
+# MAGIC df.createOrReplaceGlobalTempView() 注册一个全局表，如果存在则进行替换
+# MAGIC ```
+# MAGIC 临时表只能在当前SparkSession中使用；全局表（Global）可以跨SparkSession使用，使用时需要用global_temp做前缀。
+
+# COMMAND ----------
+
+df = spark.read.format("csv").load("/mnt/databrickscontainer1/restaurant-1-orders.csv", header=True)
+
+df.createTempView("temp_orders")
+# Temporary view 'temp_orders' already exists
+# df.createTempView("temp_orders")
+df.createOrReplaceTempView("temp_orders")
+df.createGlobalTempView("temp_orders_global")
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC 注册好表后，可以通过spark.sql(sql)来执行sql查询，返回一个新的DataFrame。
+
+# COMMAND ----------
+
+spark.sql("select * from temp_orders").show()
+spark.sql("select * from global_temp.temp_orders_global").show()
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC select * from temp_orders
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### functions
+# MAGIC 
+# MAGIC PySpark提供了一个包：pyspark.sql.functions。这个包里面提供了一系列的计算函数供SparkSQL使用。
+# MAGIC 
+# MAGIC 使用之前需要先导入相关的包。
+
+# COMMAND ----------
+
+import pyspark.sql.functions as F
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### 统计函数
+# MAGIC 
+# MAGIC **count、max、min、sum、avg、mean**
+# MAGIC * count：统计数量
+# MAGIC * max：取最大值
+# MAGIC * min：取最小值
+# MAGIC * sum：求和
+# MAGIC * avg：求均值
+# MAGIC * mean：求均值
+# MAGIC 
+# MAGIC 说明：
+# MAGIC * 这些函数都接收一个Column作为参数
+# MAGIC * 这些函数都返回一个Column
+# MAGIC * avg和mean效果是一样的，都是avg
+# MAGIC * 返回的是一个聚合值
+
+# COMMAND ----------
+
+df = spark.read.format("jdbc").option("url","jdbc:mysql://wux-mysql.mysql.database.azure.com:3306/spark?useSSL=true&requireSSL=false").option("user","wux_labs@wux-mysql").option("password","Pa55w.rd").option("query","select * from spark_mysql_test").load()
+
+df.printSchema()
+
+df.show()
+
+df.select(F.count("Total_products"), F.max("Total_products"), F.min("Total_products"), F.sum("Total_products"), F.avg("Total_products"), F.mean("Total_products")).show()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### 简单计算函数
+# MAGIC 
+# MAGIC **abs、exp、sqrt、sin、cos、rand、round、ceil、floor、cbrt**
+# MAGIC * abs：取绝对值
+# MAGIC * exp：取指数
+# MAGIC * sqrt：开平方
+# MAGIC * sin：正弦值
+# MAGIC * cos：余弦值
+# MAGIC * rand：生成随机数
+# MAGIC * round：四舍五入
+# MAGIC * ceil：向上取整
+# MAGIC * floor：向下取整
+# MAGIC * cbrt：开三次方
+# MAGIC 
+# MAGIC 说明：
+# MAGIC * 这些函数都接收一个Column作为参数(rand不需要参数)
+# MAGIC * 这些函数都返回一个Column
+# MAGIC * 返回的是一个单值
+
+# COMMAND ----------
+
+df = spark.read.format("jdbc").option("url","jdbc:mysql://wux-mysql.mysql.database.azure.com:3306/spark?useSSL=true&requireSSL=false").option("user","wux_labs@wux-mysql").option("password","Pa55w.rd").option("query","select * from spark_mysql_test").load()
+
+df.printSchema()
+
+df.show()
+
+display(df.select(F.abs("Total_products"), F.exp("Total_products"), F.sqrt("Total_products"), F.sin("Total_products"), F.cos("Total_products"), F.abs(F.cos("Total_products")), F.rand()))
+
+display(df.select(F.round("Total_products"), F.round(F.cos("Total_products")), F.ceil("Total_products"), F.ceil(F.cos("Total_products")), F.floor("Total_products"), F.floor(F.cos("Total_products")), F.cbrt("Total_products")))
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### 时间相关的函数
+# MAGIC 
+# MAGIC **current_date、current_timestamp、date_add、date_sub、datediff、dayofmonth、dayofweek、dayofyear、last_day、year、month**
+# MAGIC * current_date：返回当前日期
+# MAGIC * current_timestamp：返回当前时间戳
+# MAGIC * date_add：返回指定日期加几天的日期
+# MAGIC * date_sub：返回指定日期减几天的日期
+# MAGIC * datediff：返回两个日期相差的天数
+# MAGIC * dayofmonth：返回指定日期在所在月的第几天
+# MAGIC * dayofweek：返回指定日期在所在周的第几天
+# MAGIC * dayofyear：返回指定日期在所在年的第几天
+# MAGIC * last_day：返回指定日期在所在月的最后一天
+# MAGIC * year：返回指定日期所在的年
+# MAGIC * month：返回指定日期所在的月
+
+# COMMAND ----------
+
+df = spark.read.format("jdbc").option("url","jdbc:mysql://wux-mysql.mysql.database.azure.com:3306/spark?useSSL=true&requireSSL=false").option("user","wux_labs@wux-mysql").option("password","Pa55w.rd").option("query","select * from spark_mysql_test").load()
+
+# current_date、current_timestamp、date_add、date_sub、datediff、dayofmonth、dayofweek、dayofyear、last_day、year、month
+display(df.select(F.current_date(), F.current_timestamp(), F.date_add(F.current_date(), 5), F.date_sub(F.current_date(), 5), F.datediff(F.date_add(F.current_date(), 5), F.date_sub(F.current_date(), 5)), F.dayofmonth(F.current_date()), F.dayofweek(F.current_date()), F.dayofyear(F.current_date()), F.last_day(F.current_date()), F.year(F.current_date()), F.month(F.current_date())))
