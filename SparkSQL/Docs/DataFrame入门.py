@@ -367,7 +367,9 @@ df.show(truncate=False)
 # MAGIC create database spark;
 # MAGIC use spark;
 # MAGIC 
-# MAGIC create table spark_mysql_test (
+# MAGIC drop table spark_read_test;
+# MAGIC 
+# MAGIC create table spark_read_test (
 # MAGIC     Order_Number varchar(10),
 # MAGIC     Order_Date varchar(20),
 # MAGIC     Item_Name varchar(30),
@@ -376,16 +378,16 @@ df.show(truncate=False)
 # MAGIC     Total_products int
 # MAGIC );
 # MAGIC 
-# MAGIC insert into spark_mysql_test
+# MAGIC insert into spark_read_test
 # MAGIC values
-# MAGIC ('16089','02/08/2019 18:41','Plain Papadum 5','10','0.8','21'),
-# MAGIC ('15879','20/07/2019 16:55','Plain Papadum 5','10','0.8','7'),
-# MAGIC ('15133','01/06/2019 13:04','Plain Papadum 5','10','0.8','7'),
-# MAGIC ('14752','11/05/2019 17:48','Plain Papadum 5','10','0.8','8'),
-# MAGIC ('13212','02/02/2019 17:47','Plain Papadum 5','10','0.8','8')
+# MAGIC ('16089','02/08/2019 18:41','Plain Papadum 5','5','0.8','21'),
+# MAGIC ('15879','20/07/2019 16:55','Plain Papadum 5','12','1.3','7'),
+# MAGIC ('15133','01/06/2019 13:04','Plain Papadum 5','20','0.6','17'),
+# MAGIC ('14752','11/05/2019 17:48','Plain Papadum 5','3','2.5','8'),
+# MAGIC ('13212','02/02/2019 17:47','Plain Papadum 5','13','3.7','38')
 # MAGIC ;
 # MAGIC 
-# MAGIC select * from spark_mysql_test;
+# MAGIC select * from spark_read_test;
 # MAGIC ```
 
 # COMMAND ----------
@@ -396,14 +398,14 @@ df.show(truncate=False)
 # MAGIC 我们可以通过jdbc链接读取数据库中的数据。
 # MAGIC 
 # MAGIC 读取jdbc数据，需要指定一些参数：
-# MAGIC * url：数据库的链接字符串
+# MAGIC * url：数据库的链接字符串，如果数据库表中的数据有中文，建议使用 useUnicode=true 来确保传输中不出现乱码
 # MAGIC * user：连接数据库的用户
 # MAGIC * password：连接数据库的密码
 # MAGIC * query：去读数据的查询语句
 
 # COMMAND ----------
 
-spark.read.format("jdbc").option("url","jdbc:mysql://wux-mysql.mysql.database.azure.com:3306/spark?useSSL=true&requireSSL=false").option("user","wux_labs@wux-mysql").option("password","Pa55w.rd").option("query","select * from spark_mysql_test").load().show()
+spark.read.format("jdbc").option("url","jdbc:mysql://wux-mysql.mysql.database.azure.com:3306/spark?useSSL=true&requireSSL=false").option("user","wux_labs@wux-mysql").option("password","Pa55w.rd").option("query","select * from spark_read_test").load().show()
 
 # COMMAND ----------
 
@@ -555,7 +557,7 @@ df.groupBy("Item Name").count().show()
 
 # COMMAND ----------
 
-df = spark.read.format("jdbc").option("url","jdbc:mysql://wux-mysql.mysql.database.azure.com:3306/spark?useSSL=true&requireSSL=false").option("user","wux_labs@wux-mysql").option("password","Pa55w.rd").option("query","select * from spark_mysql_test").load()
+df = spark.read.format("jdbc").option("url","jdbc:mysql://wux-mysql.mysql.database.azure.com:3306/spark?useSSL=true&requireSSL=false").option("user","wux_labs@wux-mysql").option("password","Pa55w.rd").option("query","select * from spark_read_test").load()
 
 df.printSchema()
 df.show()
@@ -690,7 +692,9 @@ import pyspark.sql.functions as F
 
 # COMMAND ----------
 
-df = spark.read.format("jdbc").option("url","jdbc:mysql://wux-mysql.mysql.database.azure.com:3306/spark?useSSL=true&requireSSL=false").option("user","wux_labs@wux-mysql").option("password","Pa55w.rd").option("query","select * from spark_mysql_test").load()
+import pyspark.sql.functions as F
+
+df = spark.read.format("jdbc").option("url","jdbc:mysql://wux-mysql.mysql.database.azure.com:3306/spark?useSSL=true&requireSSL=false").option("user","wux_labs@wux-mysql").option("password","Pa55w.rd").option("query","select * from spark_read_test").load()
 
 df.printSchema()
 
@@ -722,7 +726,9 @@ df.select(F.count("Total_products"), F.max("Total_products"), F.min("Total_produ
 
 # COMMAND ----------
 
-df = spark.read.format("jdbc").option("url","jdbc:mysql://wux-mysql.mysql.database.azure.com:3306/spark?useSSL=true&requireSSL=false").option("user","wux_labs@wux-mysql").option("password","Pa55w.rd").option("query","select * from spark_mysql_test").load()
+import pyspark.sql.functions as F
+
+df = spark.read.format("jdbc").option("url","jdbc:mysql://wux-mysql.mysql.database.azure.com:3306/spark?useSSL=true&requireSSL=false").option("user","wux_labs@wux-mysql").option("password","Pa55w.rd").option("query","select * from spark_read_test").load()
 
 df.printSchema()
 
@@ -752,7 +758,9 @@ display(df.select(F.round("Total_products"), F.round(F.cos("Total_products")), F
 
 # COMMAND ----------
 
-df = spark.read.format("jdbc").option("url","jdbc:mysql://wux-mysql.mysql.database.azure.com:3306/spark?useSSL=true&requireSSL=false").option("user","wux_labs@wux-mysql").option("password","Pa55w.rd").option("query","select * from spark_mysql_test").load()
+import pyspark.sql.functions as F
+
+df = spark.read.format("jdbc").option("url","jdbc:mysql://wux-mysql.mysql.database.azure.com:3306/spark?useSSL=true&requireSSL=false").option("user","wux_labs@wux-mysql").option("password","Pa55w.rd").option("query","select * from spark_read_test").load()
 
 # current_date、current_timestamp、date_add、date_sub、datediff、dayofmonth、dayofweek、dayofyear、last_day、year、month
 display(df.select(F.current_date(), F.current_timestamp(), F.date_add(F.current_date(), 5), F.date_sub(F.current_date(), 5), F.datediff(F.date_add(F.current_date(), 5), F.date_sub(F.current_date(), 5)), F.dayofmonth(F.current_date()), F.dayofweek(F.current_date()), F.dayofyear(F.current_date()), F.last_day(F.current_date()), F.year(F.current_date()), F.month(F.current_date())))
@@ -922,3 +930,143 @@ display(df.fillna("loss", subset=["Cabin"]))
 
 # 按照指定规则进行缺失值填充
 display(df.fillna({"Age": 99, "Cabin": "cabin_loss", "Embarked": "Z"}))
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## DataFrame的数据写出
+# MAGIC 
+# MAGIC 与读取外部数据相对应，可以通过SparkSQL的统一API进行DataFrame数据的写出。
+# MAGIC 
+# MAGIC 支持将数据写出到：
+# MAGIC * text
+# MAGIC * csv
+# MAGIC * json
+# MAGIC * parquet
+# MAGIC * orc
+# MAGIC * avro
+# MAGIC * jdbc
+# MAGIC * ...
+# MAGIC 
+# MAGIC 统一API示例代码：
+# MAGIC ```
+# MAGIC spark.write.mode("append|overwrite|ignore|error").format("text|csv|json|parquet|orc|avro|jdbc|......")
+# MAGIC .option("K", "V") # option可选
+# MAGIC .save("文件的路径, 支持本地文件系统和HDFS")
+# MAGIC ```
+
+# COMMAND ----------
+
+schema = StructType().\
+add("OrderNumber", StringType(), nullable=False).\
+add("OrderDate", StringType(), nullable=False).\
+add("ItemName", StringType(), nullable=False).\
+add("Quantity", StringType(), nullable=False).\
+add("ProductPrice", StringType(), nullable=False).\
+add("TotalProducts", StringType(), nullable=False)
+
+df = spark.read.csv("/mnt/databrickscontainer1/restaurant-1-orders.csv", schema=schema, header=True)
+
+# COMMAND ----------
+
+df = spark.read.csv("/mnt/databrickscontainer1/restaurant-1-orders.csv", header=True)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### 文本类型数据文件
+# MAGIC 
+# MAGIC 文本类型的数据可以直接用简单的文本编辑器打开进行查看或编辑，比如：text文件、csv文件、json文件等。
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### text
+# MAGIC 
+# MAGIC Text data source supports only a single column.
+# MAGIC 
+# MAGIC 写出到文本类型的文件，仅支持一个列，有多余的列则会报错。
+
+# COMMAND ----------
+
+df.select("Item Name").write.mode("overwrite").format("text").save("/mnt/databrickscontainer1/restaurant-1-orders-text")
+
+# COMMAND ----------
+
+# 将 write.format("text").save(path) 合并为 write.text(path)
+df.select("Item Name").write.mode("overwrite").text("/mnt/databrickscontainer1/restaurant-1-orders-text")
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### csv & json
+
+# COMMAND ----------
+
+df.write.mode("overwrite").format("csv").option("sep", ",").option("header", True).save("/mnt/databrickscontainer1/restaurant-1-orders-csv")
+
+df.write.mode("overwrite").format("json").save("/mnt/databrickscontainer1/restaurant-1-orders-json")
+
+# COMMAND ----------
+
+# 将 write.format("csv").save(path) 合并为 write.csv(path)
+df.write.mode("overwrite").csv("/mnt/databrickscontainer1/restaurant-1-orders-csv", sep=",", header=True)
+# 将 write.format("json").save(path) 合并为 write.json(path)
+df.write.mode("overwrite").json("/mnt/databrickscontainer1/restaurant-1-orders-json")
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### 自带schema的数据文件
+# MAGIC 
+# MAGIC 在大数据环境中，还有其他各种各样的数据格式，比如：Parquet、Avro、ORC。
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### parquet & orc
+
+# COMMAND ----------
+
+df.write.mode("overwrite").format("parquet").save("/mnt/databrickscontainer1/restaurant-1-orders-parquet")
+df.write.mode("overwrite").format("orc").save("/mnt/databrickscontainer1/restaurant-1-orders-orc")
+
+# COMMAND ----------
+
+# 将 write.format("parquet").save(path) 合并为 write.parquet(path)
+df.write.mode("overwrite").parquet("/mnt/databrickscontainer1/restaurant-1-orders-parquet")
+# 将 write.format("orc").save(path) 合并为 write.orc(path)
+df.write.mode("overwrite").orc("/mnt/databrickscontainer1/restaurant-1-orders-orc")
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### avro
+# MAGIC 
+# MAGIC avro文件不支持不合格的列名称，比如包含空格："Order Number"
+
+# COMMAND ----------
+
+df.select("Quantity").where("Quantity=15").write.mode("overwrite").format("avro").save("/mnt/databrickscontainer1/restaurant-1-orders-avro")
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### 传统的结构化数据源
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### jdbc
+# MAGIC 
+# MAGIC 我们可以通过jdbc链接将DataFrame的数据写入数据库中。
+# MAGIC 
+# MAGIC 需要指定一些参数：
+# MAGIC * url：数据库的链接字符串，如果数据库表中的数据有中文，建议使用 useUnicode=true 来确保传输中不出现乱码
+# MAGIC * user：连接数据库的用户
+# MAGIC * password：连接数据库的密码
+# MAGIC * dbtable：指定要写入的表名称
+
+# COMMAND ----------
+
+df.write.mode("overwrite").format("jdbc").option("url","jdbc:mysql://wux-mysql.mysql.database.azure.com:3306/spark?useSSL=true&requireSSL=false").option("user","wux_labs@wux-mysql").option("password","Pa55w.rd").option("dbtable","spark_write_test").option("showSql",True).save()
