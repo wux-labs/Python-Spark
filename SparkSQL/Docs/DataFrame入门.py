@@ -659,7 +659,7 @@ spark.sql("select * from global_temp.temp_orders_global").show()
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### functions
+# MAGIC ### 内置函数
 # MAGIC 
 # MAGIC PySpark提供了一个包：pyspark.sql.functions。这个包里面提供了一系列的计算函数供SparkSQL使用。
 # MAGIC 
@@ -756,3 +756,169 @@ df = spark.read.format("jdbc").option("url","jdbc:mysql://wux-mysql.mysql.databa
 
 # current_date、current_timestamp、date_add、date_sub、datediff、dayofmonth、dayofweek、dayofyear、last_day、year、month
 display(df.select(F.current_date(), F.current_timestamp(), F.date_add(F.current_date(), 5), F.date_sub(F.current_date(), 5), F.datediff(F.date_add(F.current_date(), 5), F.date_sub(F.current_date(), 5)), F.dayofmonth(F.current_date()), F.dayofweek(F.current_date()), F.dayofyear(F.current_date()), F.last_day(F.current_date()), F.year(F.current_date()), F.month(F.current_date())))
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### 数据清洗
+# MAGIC 
+# MAGIC 上面我们处理的数据实际上都是已经被处理好的规整数据，但在实际生产中，数据可能是杂乱无章的，这就需要我们先对数据进行清洗，整理为符合处理要求的规整数据。
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### 删除重复行
+# MAGIC 
+# MAGIC **dropDuplicates()**
+# MAGIC 
+# MAGIC 功能：对DataFrame的数据进行去重，如果重复数据有多条，取第一条。
+# MAGIC 
+# MAGIC 语法：  
+# MAGIC df.dropDuplicates(subset=None)  
+# MAGIC * subset：去重的字段子集
+
+# COMMAND ----------
+
+# |Order Number|      Order Date|           Item Name|Quantity|Product Price|Total products|
+df = spark.read.format("csv").load("/mnt/databrickscontainer1/restaurant-1-orders.csv", header=True)
+
+# 构建一个包含重复数据的DataFrame
+dfDuplicates = df.select(df["Order Number"], df["Item Name"], df["Quantity"], df["Total products"])
+
+# 缓存一下数据
+dfDuplicates.cache()
+
+# 展示原始记录数
+print(dfDuplicates.count())
+
+# 展示有重复的数据
+dfDuplicates.groupBy(df["Order Number"], df["Item Name"], df["Quantity"], df["Total products"]).count().where("count > 1").show()
+
+# 取出重复行
+dfDistinct = dfDuplicates.dropDuplicates()
+
+# 缓存一下
+dfDistinct.cache()
+
+# 展示去重后的记录数
+print(dfDistinct.count())
+
+# 无重复的数据
+dfDistinct.groupBy(df["Order Number"], df["Item Name"], df["Quantity"], df["Total products"]).count().where("count > 1").show()
+
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC 去重可以指定字段，重复的数据保留第一条。
+
+# COMMAND ----------
+
+# |Order Number|      Order Date|           Item Name|Quantity|Product Price|Total products|
+df = spark.read.format("csv").load("/mnt/databrickscontainer1/restaurant-1-orders.csv", header=True)
+
+# use '&' for 'and', '|' for 'or', '~' for 'not'
+dfTest = df.where(((df["Order Number"] == "7193") | (df["Order Number"] == "9360")) & (df["Item Name"] == "Bhuna"))
+
+dfTest.show()
+
+dfTest.dropDuplicates(["Item Name"]).show()
+dfTest.dropDuplicates(["Quantity"]).show()
+dfTest.dropDuplicates(["Item Name", "Order Date"]).show()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### 删除有缺失值的行
+# MAGIC 
+# MAGIC **dropna()**
+# MAGIC 
+# MAGIC 功能：如果数据中包含null，通过dropna来判断，符合条件就删除这一行数据。
+# MAGIC 
+# MAGIC 语法：  
+# MAGIC df.dropna(how, thresh, subset)  
+# MAGIC * how：删除方式，"any" 表示只要有字段为 null 就删除，"all" 表示该行所有字段都为 null 才删除。默认值是any  
+# MAGIC * thresh：指定阈值进行删除，表示最少有多少列包含有效数据，该行数据才保留  
+# MAGIC * subset：指定字段列表，表示需要在这些字段中满足上面的条件，该行数据才保留
+
+# COMMAND ----------
+
+df = spark.read.format("csv").load("/mnt/databrickscontainer1/taitanic_train.csv", header=True)
+
+# 展示原始数据
+display(df)
+
+# 只有所有字段都是null才删除
+display(df.dropna("all"))
+
+# 默认值any，只要有字段为null就删除
+display(df.dropna())
+
+# 指定需要有3列是有效数据的才保留，由于泰坦尼克号数据集有12个字段，都满足3个有效字段，所以不会删除数据
+display(df.dropna(thresh=3))
+
+# 泰坦尼克号数据中有空置的字段是 "Age", "Cabin", "Embarked"
+# 指定4个字段中有3个有效则保留，则会允许一个字段为null的数据留下来
+display(df.dropna(thresh=3, subset=["Sex", "Age", "Cabin", "Embarked"]))
+
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### 删除列
+# MAGIC 
+# MAGIC **drop()**
+# MAGIC 
+# MAGIC 功能：删除指定的列，返回一个不包含指定列的新的DataFrame。
+# MAGIC 
+# MAGIC 语法：  
+# MAGIC df.drop(*cols) 
+# MAGIC * cols：指定的需要删除的列
+# MAGIC 
+# MAGIC > 该功能可以用 df.select(指定列之外的列) 来实现。  
+# MAGIC > 但是当DataFrame的列太多的时候，用select方式需要书写的列名太长，用drop就比较方便。
+
+# COMMAND ----------
+
+df = spark.read.format("csv").load("/mnt/databrickscontainer1/taitanic_train.csv", header=True)
+
+# 展示原始数据
+display(df)
+
+# 删除指定的列
+display(df.drop(df["Cabin"]))
+
+# 可以用select实现，只是代码书写量大
+display(df.select("PassengerId","Survived","Pclass","Name","Sex","Age","SibSp","Parch","Ticket","Fare","Embarked"))
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### 填充缺失值
+# MAGIC 
+# MAGIC **fillna()**
+# MAGIC 
+# MAGIC 如果缺失的数据比较少，删除行或列造成数据丢失比较多，可以使用填充缺失值的方法来规整数据。
+# MAGIC 
+# MAGIC 功能：根据参数规则来填充null值。
+# MAGIC 
+# MAGIC 语法：  
+# MAGIC df.fillna(value, subset)  
+# MAGIC * value：填充的值，或者规则
+# MAGIC * subset：指定填充的列
+
+# COMMAND ----------
+
+df = spark.read.format("csv").load("/mnt/databrickscontainer1/taitanic_train.csv", header=True)
+
+# 展示原始数据
+display(df)
+
+# 对所有缺失值填充指定的值
+display(df.fillna("loss"))
+
+# 对指定的列填充缺失值
+display(df.fillna("loss", subset=["Cabin"]))
+
+# 按照指定规则进行缺失值填充
+display(df.fillna({"Age": 99, "Cabin": "cabin_loss", "Embarked": "Z"}))
