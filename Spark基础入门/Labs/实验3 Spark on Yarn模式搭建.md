@@ -128,6 +128,10 @@ export HADOOP_LOG_DIR=/home/hadoop/logs
         <name>mapreduce.framework.name</name>
         <value>yarn</value>
     </property>
+    <property>
+        <name>mapreduce.application.classpath</name>
+        <value>$HADOOP_HOME/share/hadoop/mapreduce/*:$HADOOP_HOME/share/hadoop/mapreduce/lib/*</value>
+    </property>
 </configuration>
 ```
 
