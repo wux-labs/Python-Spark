@@ -1,0 +1,96 @@
+version: '3.5'
+
+services:
+  node1:
+    image: wux_labs/spark:3.2.1
+    container_name: node1
+    restart: always
+    volumes:
+      - /home/hadoop/apps:/home/hadoop/apps
+      - node1_works:/home/hadoop/works
+    ports:
+      - 8088:8088
+      - 9870:9870
+    networks:
+      hadoop_networks_24:
+        ipv4_address: 172.24.0.101
+
+  node2:
+    image: wux_labs/spark:3.2.1
+    container_name: node2
+    restart: always
+    volumes:
+      - /home/hadoop/apps:/home/hadoop/apps
+      - node2_works:/home/hadoop/works
+    networks:
+      hadoop_networks_24:
+        ipv4_address: 172.24.0.102
+
+  node3:
+    image: wux_labs/spark:3.2.1
+    container_name: node3
+    restart: always
+    volumes:
+      - /home/hadoop/apps:/home/hadoop/apps
+      - node3_works:/home/hadoop/works
+    networks:
+      hadoop_networks_24:
+        ipv4_address: 172.24.0.103
+
+  node4:
+    image: wux_labs/spark:3.2.1
+    container_name: node4
+    restart: always
+    volumes:
+      - /home/hadoop/apps:/home/hadoop/apps
+      - node4_works:/home/hadoop/works
+    networks:
+      hadoop_networks_24:
+        ipv4_address: 172.24.0.104
+
+  node5:
+    image: wux_labs/spark:3.2.1
+    container_name: node5
+    restart: always
+    volumes:
+      - /home/hadoop/apps:/home/hadoop/apps
+      - node5_works:/home/hadoop/works
+    networks:
+      hadoop_networks_24:
+        ipv4_address: 172.24.0.105
+
+  mysql:
+    image: mysql:8
+    container_name: mysql
+    restart: always
+    volumes:
+      - mysql_data:/var/lib/mysql
+    environment:
+      - "MYSQL_ROOT_PASSWORD=123456"
+      - "TZ=Asia/Shanghai"
+    ports:
+      - 3306:3306
+    networks:
+      hadoop_networks_24:
+        ipv4_address: 172.24.0.106
+
+networks:
+  hadoop_networks_24:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.24.0.0/24
+
+volumes:
+  node1_works:
+    driver: local
+  node2_works:
+    driver: local
+  node3_works:
+    driver: local
+  node4_works:
+    driver: local
+  node5_works:
+    driver: local
+  mysql_data:
+    driver: local
