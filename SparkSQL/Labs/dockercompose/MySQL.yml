@@ -1,0 +1,22 @@
+version: '3.5'
+
+services:
+  mysql:
+    image: mysql:8
+    container_name: mysql
+    restart: always
+    environment:
+      - "MYSQL_ROOT_PASSWORD=123456"
+      - "TZ=Asia/Shanghai"
+    ports:
+      - 3306:3306
+    networks:
+      hadoop_networks_24:
+        ipv4_address: 172.24.0.106
+
+networks:
+  hadoop_networks_24:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.24.0.0/24
