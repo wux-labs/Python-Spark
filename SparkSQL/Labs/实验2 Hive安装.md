@@ -29,9 +29,9 @@ Hive的运行需要Hadoop环境，所以我们安装Hive就基于已有的Hadoop
 解压安装程序、创建软链接。
 
 ```
-tar -xzf softs/hadoop-3.3.2.tar.gz -C apps/
+tar -xzf softs/apache-hive-3.1.3-bin.tar.gz -C apps/
 cd apps
-ln -s hadoop-3.3.2 hadoop
+ln -s apache-hive-3.1.3-bin hive
 ```
 
 ![image-20220427124914494](images/image-20220427124914494.png)
