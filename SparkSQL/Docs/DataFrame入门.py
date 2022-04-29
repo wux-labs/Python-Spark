@@ -768,6 +768,88 @@ display(df.select(F.current_date(), F.current_timestamp(), F.date_add(F.current_
 # COMMAND ----------
 
 # MAGIC %md
+# MAGIC ### 窗口函数
+# MAGIC 
+# MAGIC **窗口：** 可以理解为满足指定条件的数据记录的集合。
+# MAGIC 
+# MAGIC **窗口函数：** 在满足指定条件的记录集合（一个窗口）上执行的特殊函数，对于每条记录都要在此窗口内执行函数。
+# MAGIC 
+# MAGIC **静态窗口：** 有的窗口函数的窗口大小是固定的，这种属于静态窗口。
+# MAGIC 
+# MAGIC **滑动窗口：** 有的窗口函数的窗口大小是不固定的，这种属于滑动窗口。
+# MAGIC 
+# MAGIC 窗口函数最明显的特征就是带有over()关键字。
+# MAGIC 
+# MAGIC 窗口函数使用order by关键字对数据进行排序，相同数据属于一个窗口；同时可以使用partition by进行数据分区，不同分区的数据独立进行窗口函数的调用。
+# MAGIC 
+# MAGIC 窗口函数同时具备了普通语句的group by功能（用partition by实现的），也具备普通语句的order by功能（用order by实现的）。但是与普通group by不同的是：group by语句会将相同组的数据聚合成一条数据，属于多对一的关系；而partition by在分组之后会保留原有数据的所有记录，不会聚合成一条，属于一对一的关系。
+# MAGIC 
+# MAGIC 窗口函数的引入是为了**既显示聚合前的数据，又显示聚合后的结果**，只是在窗口函数所在的查询位置上添加一列来展示聚合结果。
+# MAGIC 
+# MAGIC 普通聚合函数也可以用于窗口函数中，赋予它窗口函数的功能。由于普通聚合函数只返回一个值，但是窗口函数返回的是多行记录，所以一个窗口中所有记录的聚合结果列的值都是一样的。
+# MAGIC 
+# MAGIC **row_number() over()、rank() over()、dense_rank() over()、ntile() over()、avgs() over()**
+# MAGIC * 排序类型
+# MAGIC   * row_number：返回行号
+# MAGIC   * rank：返回分组排序号，序号可能不连续
+# MAGIC   * dense_rank：返回分组排序号，序号连续
+# MAGIC * 聚合类型
+# MAGIC   * sum
+# MAGIC   * count
+# MAGIC   * avg
+# MAGIC   * max
+# MAGIC   * min
+# MAGIC * 分区类型
+# MAGIC   * ntile
+
+# COMMAND ----------
+
+df = spark.read.format("csv").load("/mnt/databrickscontainer1/restaurant-1-orders.csv", header=True)
+
+df.createTempView("restaurant_orders")
+
+# 先看一下原始数据
+spark.sql("select * from restaurant_orders").show()
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC -- 对全表按“订单日期”字段排序，返回行号
+# MAGIC select *,  row_number() over(order by `Order Date` desc) as rn from restaurant_orders;
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC -- 按“项目名称”进行分组，按“订单日期”字段排序，返回分组行号
+# MAGIC select *,  row_number() over(partition by `Item Name` order by `Order Date` desc) as rn2 from restaurant_orders;
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC -- 对全表按“订单日期”字段排序，返回分组排序
+# MAGIC select *, rank() over(order by `Order Date`) as rn1, dense_rank() over(order by `Order Date`) as rn2 from restaurant_orders;
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC -- 按“项目名称”进行分组，按“数量”字段排序，返回分组排序
+# MAGIC select *, rank() over(partition by `Item Name` order by `Quantity`) as rn1, dense_rank() over(partition by `Item Name` order by `Quantity`) as rn2 from restaurant_orders;
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC -- 对全表按“订单日期”字段排序，对产品价格进行聚合
+# MAGIC select *, sum(cast(`Product Price` as double)) over(order by `Order Date`) as s, count(cast(`Product Price` as double)) over(order by `Order Date`) as c, avg(cast(`Product Price` as double)) over(order by `Order Date`) as a from restaurant_orders;
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC -- 按“项目名称”进行分组，按“数量”字段排序，对产品价格进行聚合
+# MAGIC select *, sum(cast(`Product Price` as double)) over(partition by `Item Name` order by `Quantity`) as s, count(cast(`Product Price` as double)) over(partition by `Item Name` order by `Quantity`) as c, avg(cast(`Product Price` as double)) over(partition by `Item Name` order by `Quantity`) as a from restaurant_orders;
+
+# COMMAND ----------
+
+# MAGIC %md
 # MAGIC ### 数据清洗
 # MAGIC 
 # MAGIC 上面我们处理的数据实际上都是已经被处理好的规整数据，但在实际生产中，数据可能是杂乱无章的，这就需要我们先对数据进行清洗，整理为符合处理要求的规整数据。
