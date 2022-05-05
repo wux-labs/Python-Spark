@@ -813,6 +813,11 @@ spark.sql("select * from restaurant_orders").show()
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC #### 排序类型窗口函数
+
+# COMMAND ----------
+
 # MAGIC %sql
 # MAGIC -- 对全表按“订单日期”字段排序，返回行号
 # MAGIC select *,  row_number() over(order by `Order Date` desc) as rn from restaurant_orders;
@@ -837,6 +842,11 @@ spark.sql("select * from restaurant_orders").show()
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC #### 聚合类型窗口函数
+
+# COMMAND ----------
+
 # MAGIC %sql
 # MAGIC -- 对全表按“订单日期”字段排序，对产品价格进行聚合
 # MAGIC select *, sum(cast(`Product Price` as double)) over(order by `Order Date`) as s, count(cast(`Product Price` as double)) over(order by `Order Date`) as c, avg(cast(`Product Price` as double)) over(order by `Order Date`) as a from restaurant_orders;
@@ -846,6 +856,140 @@ spark.sql("select * from restaurant_orders").show()
 # MAGIC %sql
 # MAGIC -- 按“项目名称”进行分组，按“数量”字段排序，对产品价格进行聚合
 # MAGIC select *, sum(cast(`Product Price` as double)) over(partition by `Item Name` order by `Quantity`) as s, count(cast(`Product Price` as double)) over(partition by `Item Name` order by `Quantity`) as c, avg(cast(`Product Price` as double)) over(partition by `Item Name` order by `Quantity`) as a from restaurant_orders;
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### 自定义函数
+# MAGIC 
+# MAGIC 无论是Hive还是SparkSQL在做数据分析处理时，往往需要使用函数。前面我们已经了解了SparkSQL在pyspark.sql.functions中已经提供了很多实现公共功能的函数，那如果我们需要按照自己的需求来设计函数该怎么办呢？SparkSQL与Hive一样支持自定义函数：UDF和UDAF，尤其时UDF在项目中使用最广泛。
+# MAGIC 
+# MAGIC Hive支持三种自定义函数：
+# MAGIC * UDF(User-Defined Function)，函数
+# MAGIC   * 一对一关系，输入一个值经过函数以后输出一个值
+# MAGIC * UDAF(User-Defined Aggregation Function)，聚合函数
+# MAGIC   * 多对一关系，输入多行值输出一个值，通常与group by联合使用
+# MAGIC * UDTF(User-Defined Table-Generation Function)
+# MAGIC   * 一对多关系，输入一个值输出多行值
+# MAGIC 
+# MAGIC 在SparkSQL中，目前仅支持UDF函数和UDAF函数，而Python仅支持UDF函数。
+# MAGIC 
+# MAGIC 在SparkSQL中定义自定义函数有两种方式：
+# MAGIC * sparksession.udf.register(参数1, 参数2, 参数3)
+# MAGIC   * 注册的UDF可以用于DSL和SQL风格，其中返回值用于DSL风格，参数内的名字用于SQL风格
+# MAGIC   * 参数1：UDF名称，用于SQL风格调用
+# MAGIC   * 参数2：自定义的函数的函数名称
+# MAGIC   * 参数3：声明UDF的返回值类型
+# MAGIC * pyspark.sql.functions.udf(参数1, 参数2)
+# MAGIC   * 仅能用于DSL风格
+# MAGIC   * 参数1：自定义的函数的函数名称
+# MAGIC   * 参数2：声明UDF的返回值类型
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### UDF
+# MAGIC 
+# MAGIC 下面我们自定义一个函数，让价格加上5。
+
+# COMMAND ----------
+
+# 定义一个将价格加5的函数
+def price_add_5(data):
+    return float(data) + 5
+
+# COMMAND ----------
+
+from pyspark.sql.types import DoubleType
+import pyspark.sql.functions as F
+
+# 通过方式1进行函数的注册
+# 参数1："udf1"，用于SQL风格的函数调用
+# 参数2：price_add_5，自定义函数的函数名称
+# 参数3：DoubleType()，声明UDF的返回值类型
+# 返回值：udf2，用于DSL风格的函数调用
+udf2 = spark.udf.register("udf1", price_add_5, DoubleType())
+
+# 通过方式2进行函数的注册
+# 参数1：price_add_5，自定义函数的函数名称
+# 参数2：DoubleType()，声明UDF的返回值类型
+# 返回值：udf3，用于DSL风格的函数调用
+udf3 = F.udf(price_add_5, DoubleType())
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC -- 通过方式1定义的UDF的参数1可以用于SQL风格
+# MAGIC select t.*, udf1(`Product Price`) from restaurant_orders t
+
+# COMMAND ----------
+
+# 通过方式1定义的UDF的返回值可以用于DSL风格
+df.select("`Product Price`", udf2("`Product Price`")).show()
+
+# COMMAND ----------
+
+# 通过方式2定义的UDF的返回值可以用于DSL风格
+df.select("`Product Price`", udf3("`Product Price`")).show()
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC -- 但是，通过方式2定义的UDF不可以用于SQL风格
+# MAGIC select t.*, udf3(`Product Price`) from restaurant_orders t
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### UDAF
+# MAGIC 
+# MAGIC Python并不支持UDAF，要实现UDAF需要使用Scala或Java进行代码编写。
+# MAGIC 
+# MAGIC SparkSQL提供了内置函数 avg/mean，计算逻辑是：![](https://www.zhihu.com/equation?tex=Avg%3D%5Cfrac%7B%5Csum_%7Bi%3D1%7D%5En+x_i%7Dn)。
+# MAGIC 
+# MAGIC 我们自定义一个函数，求分组中最大值与最小值的平均值：![](https://www.zhihu.com/equation?tex=MyAvg%3D%5Cfrac%7Bmax%28x_i%29%2Bmin%28x_i%29%7D2)。
+
+# COMMAND ----------
+
+# MAGIC %scala
+# MAGIC import scala.math.{max, min}
+# MAGIC import org.apache.spark.sql.{Encoder, Encoders}
+# MAGIC import org.apache.spark.sql.expressions.Aggregator
+# MAGIC 
+# MAGIC case class Average(var min: Double, var max: Double)
+# MAGIC 
+# MAGIC object MyAggregator extends Aggregator[Double, Average, Double] {
+# MAGIC   
+# MAGIC   def bufferEncoder: org.apache.spark.sql.Encoder[Average] = Encoders.product
+# MAGIC   def outputEncoder: org.apache.spark.sql.Encoder[Double] = Encoders.scalaDouble
+# MAGIC   
+# MAGIC   // 初始化缓存数据
+# MAGIC   def zero: Average = Average(Double.MaxValue, Double.MinValue)
+# MAGIC   
+# MAGIC   // 相同分区下，对下一个值进行聚合的逻辑
+# MAGIC   // 缓存数据用于存放最大值、最小值
+# MAGIC   def reduce(buffer: Average, value: Double): Average = Average(min(buffer.min, value), max(buffer.max, value))
+# MAGIC   
+# MAGIC   // 不同分区之间的数据合并
+# MAGIC   def merge(buffer1: Average,buffer2: Average): Average = Average(min(buffer1.min, buffer2.min), max(buffer1.max, buffer2.max))
+# MAGIC   
+# MAGIC   // 聚合结束后，返回什么
+# MAGIC   // 返回最大值、最小值的平均值 (reduction.min + reduction.max) / 2
+# MAGIC   def finish(reduction: Average): Double = (reduction.min + reduction.max) / 2
+# MAGIC }
+
+# COMMAND ----------
+
+# MAGIC %scala
+# MAGIC import org.apache.spark.sql.functions._
+# MAGIC spark.udf.register("MyAvg",udaf(MyAggregator))
+
+# COMMAND ----------
+
+# MAGIC %scala
+# MAGIC // 由于单个产品的价格是相同的，所以取最大值、最小值的结果是一样的，求平均就没什么意义
+# MAGIC // 所以我们将单价乘以数量，得到的是每个订单的购买总价，由于订单中的数量不同，所以总价就不同，可以看出效果
+# MAGIC spark.sql("select `Item Name`, avg(Quantity * `Product Price`) as avg, max(Quantity * `Product Price`) as max, min(Quantity * `Product Price`) as min, MyAvg(Quantity * `Product Price`) as myavg from restaurant_orders group by `Item Name`").show()
 
 # COMMAND ----------
 
