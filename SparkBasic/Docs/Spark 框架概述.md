@@ -6,7 +6,7 @@
 
 Unified engine for large-scale data analytics.
 
-用于**大规模数据**（large-scala data）处理的**统一（unified）分析引擎**。
+用于**大规模数据**（large-scala data）分析的**统一（unified）引擎**。
 
 Apache Spark™ is a multi-language engine for executing data engineering, data science, and machine learning on single-node machines or clusters. 
 
