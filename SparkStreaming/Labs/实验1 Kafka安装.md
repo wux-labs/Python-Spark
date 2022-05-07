@@ -238,7 +238,7 @@ networks:
     driver: bridge
     ipam:
       config:
-        - subnet: 172.26.0.0/24
+        - subnet: 172.24.0.0/24
 
 volumes:
   kafka_node1_works:
