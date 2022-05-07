@@ -1,0 +1,53 @@
+version: '3.5'
+
+services:
+  kafka-node1:
+    image: wux_labs/kafka:3.1.0
+    container_name: kafka-node1
+    restart: always
+    volumes:
+      - /home/hadoop/apps:/home/hadoop/apps
+      - ./kafka-node1-server.properties:/home/hadoop/apps/kafka/config/server.properties
+      - kafka_node1_works:/home/hadoop/works
+    networks:
+      hadoop_networks_24:
+        ipv4_address: 172.24.0.107
+
+  kafka-node2:
+    image: wux_labs/kafka:3.1.0
+    container_name: kafka-node2
+    restart: always
+    volumes:
+      - /home/hadoop/apps:/home/hadoop/apps
+      - ./kafka-node2-server.properties:/home/hadoop/apps/kafka/config/server.properties
+      - kafka_node2_works:/home/hadoop/works
+    networks:
+      hadoop_networks_24:
+        ipv4_address: 172.24.0.108
+
+  kafka-node3:
+    image: wux_labs/kafka:3.1.0
+    container_name: kafka-node3
+    restart: always
+    volumes:
+      - /home/hadoop/apps:/home/hadoop/apps
+      - ./kafka-node3-server.properties:/home/hadoop/apps/kafka/config/server.properties
+      - kafka_node3_works:/home/hadoop/works
+    networks:
+      hadoop_networks_24:
+        ipv4_address: 172.24.0.109
+
+networks:
+  hadoop_networks_24:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.26.0.0/24
+
+volumes:
+  kafka_node1_works:
+    driver: local
+  kafka_node2_works:
+    driver: local
+  kafka_node3_works:
+    driver: local
