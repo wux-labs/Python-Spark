@@ -21,8 +21,16 @@ ssc
 # 监听指定路径下的文件，读取一个时间窗口内发生变化的（新增、修改）文件进行处理
 lines = ssc.textFileStream("/mnt/databrickscontainer1/SparkStreaming")
 
-# 按行读取文件、用空格拆分单词、按单词统计个数、打印
-lines.flatMap(lambda x: x.split(" ")).map(lambda x: (x, 1)).reduceByKey(lambda a,b: a + b).pprint()
+# 按行读取文件、用空格拆分单词
+words = lines.flatMap(lambda x: x.split(" "))
+# 为每个单词计数为1
+pairs = words.map(lambda x: (x, 1))
+# 根据单词汇总单词的个数
+counts = pairs.reduceByKey(lambda a,b: a + b)
+# 打印最终的结果，得到WordCount
+counts.pprint()
+
+# lines.flatMap(lambda x: x.split(" ")).map(lambda x: (x, 1)).reduceByKey(lambda a,b: a + b).pprint()
 
 # 启动流处理
 ssc.start()
