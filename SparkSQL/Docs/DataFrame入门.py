@@ -88,7 +88,7 @@ df.show()
 
 from pyspark.sql.types import StructType, StringType, IntegerType, DoubleType
 
-rdd = sc.textFile("/mnt/databrickscontainer1/restaurant-1-orders.csv").map(lambda x: x.split(",")).filter(lambda x: x[0] != "Order Number")
+rdd = sc.textFile("/mnt/databrickscontainer1/restaurant-1-orders.csv").map(lambda x: x.split(",")).filter(lambda x: x[0] != "Order Number").map(lambda x: (x[0],x[1],x[2],int(x[3]),float(x[4]),float(x[5])))
 
 print(type(rdd))
 
@@ -96,9 +96,9 @@ schema = StructType().\
 add("OrderNumber2", StringType(), nullable=False).\
 add("OrderDate2", StringType(), nullable=False).\
 add("ItemName2", StringType(), nullable=False).\
-add("Quantity2", StringType(), nullable=False).\
-add("ProductPrice2", StringType(), nullable=False).\
-add("TotalProducts2", StringType(), nullable=False)
+add("Quantity2", IntegerType(), nullable=False).\
+add("ProductPrice2", DoubleType(), nullable=False).\
+add("TotalProducts2", DoubleType(), nullable=False)
 
 df = spark.createDataFrame(rdd, schema)
 
@@ -118,7 +118,7 @@ df.show()
 
 from pyspark.sql.types import StructType, StringType, IntegerType, DoubleType
 
-rdd = sc.textFile("/mnt/databrickscontainer1/restaurant-1-orders.csv").map(lambda x: x.split(",")).filter(lambda x: x[0] != "Order Number")
+rdd = sc.textFile("/mnt/databrickscontainer1/restaurant-1-orders.csv").map(lambda x: x.split(",")).filter(lambda x: x[0] != "Order Number").map(lambda x: (x[0],x[1],x[2],int(x[3]),float(x[4]),float(x[5])))
 
 print(type(rdd))
 
@@ -126,9 +126,9 @@ schema = StructType().\
 add("OrderNumber3", StringType(), nullable=False).\
 add("OrderDate3", StringType(), nullable=False).\
 add("ItemName3", StringType(), nullable=False).\
-add("Quantity3", StringType(), nullable=False).\
-add("ProductPrice3", StringType(), nullable=False).\
-add("TotalProducts3", StringType(), nullable=False)
+add("Quantity3", IntegerType(), nullable=False).\
+add("ProductPrice3", DoubleType(), nullable=False).\
+add("TotalProducts3", DoubleType(), nullable=False)
 
 df = rdd.toDF(schema)
 
@@ -300,11 +300,11 @@ spark.read.json("/mnt/databrickscontainer1/restaurant-1-orders.json").show(trunc
 # 由于没有现成的文件，所以我们只能构造一个
 df = spark.read.csv("/mnt/databrickscontainer1/restaurant-1-orders.csv", header=True)
 
-df.where("Quantity=5").write.mode("overwrite").parquet("/mnt/databrickscontainer1/restaurant-1-orders-parquet")
+# df.where("Quantity=5").write.mode("overwrite").parquet("/mnt/databrickscontainer1/restaurant-1-orders-parquet")
 
-df.where("Quantity=10").write.mode("overwrite").orc("/mnt/databrickscontainer1/restaurant-1-orders-orc")
-
-df.select("Quantity").where("Quantity=15").write.mode("overwrite").format("avro").save("/mnt/databrickscontainer1/restaurant-1-orders-avro")
+# df.where("Quantity=10").write.mode("overwrite").orc("/mnt/databrickscontainer1/restaurant-1-orders-orc")
+df.selectExpr("`Order Number` as OrderNumber","`Order Date` as OrderDate","`Item Name` as ItemName","Quantity","`Product Price` as ProductPrice","`Total products` as TotalProducts").write.mode("overwrite").format("avro").save("/mnt/databrickscontainer1/restaurant-1-orders-avro")
+# df.write.mode("overwrite").format("avro").save("/mnt/databrickscontainer1/restaurant-1-orders-avro")
 
 
 # COMMAND ----------
@@ -419,15 +419,6 @@ spark.read.format("jdbc").option("url","jdbc:mysql://wux-mysql.mysql.database.az
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### DSL语法风格
-# MAGIC 
-# MAGIC DSL称之为：**领域特定语言**，其实就是指DataFrame的特有API。
-# MAGIC 
-# MAGIC DSL风格意思就是以调用API的方式来处理数据，比如：df.select().where().limit()
-
-# COMMAND ----------
-
-# MAGIC %md
 # MAGIC #### printSchema
 # MAGIC 
 # MAGIC 功能：打印输出DataFrame的schema信息。
@@ -460,6 +451,15 @@ df = spark.read.format("text").load("/mnt/databrickscontainer1/restaurant-1-orde
 df.show()
 df.show(truncate=False)
 df.show(5, truncate=False)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### DSL语法风格
+# MAGIC 
+# MAGIC DSL称之为：**领域特定语言**，其实就是指DataFrame的特有API。
+# MAGIC 
+# MAGIC DSL风格意思就是以调用API的方式来处理数据，比如：df.select().where().limit()
 
 # COMMAND ----------
 
@@ -657,6 +657,11 @@ spark.sql("select * from global_temp.temp_orders_global").show()
 
 # MAGIC %sql
 # MAGIC select * from temp_orders
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## DataFrame的函数
 
 # COMMAND ----------
 
@@ -994,7 +999,7 @@ df.select("`Product Price`", udf3("`Product Price`")).show()
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### 数据清洗
+# MAGIC ## DataFrame的数据清洗
 # MAGIC 
 # MAGIC 上面我们处理的数据实际上都是已经被处理好的规整数据，但在实际生产中，数据可能是杂乱无章的，这就需要我们先对数据进行清洗，整理为符合处理要求的规整数据。
 
@@ -1273,7 +1278,7 @@ df.write.mode("overwrite").orc("/mnt/databrickscontainer1/restaurant-1-orders-or
 
 # COMMAND ----------
 
-df.select("Quantity").where("Quantity=15").write.mode("overwrite").format("avro").save("/mnt/databrickscontainer1/restaurant-1-orders-avro")
+df.selectExpr("`Order Number` as OrderNumber","`Order Date` as OrderDate","`Item Name` as ItemName","Quantity","`Product Price` as ProductPrice","`Total products` as TotalProducts").write.mode("overwrite").format("avro").save("/mnt/databrickscontainer1/restaurant-1-orders-avro")
 
 # COMMAND ----------
 
