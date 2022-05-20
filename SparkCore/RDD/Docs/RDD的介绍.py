@@ -101,9 +101,16 @@
 
 # COMMAND ----------
 
-rdd = sc.parallelize([0, 1,2,3,4,5,6,7,8,9],5)
-print("RDD的分区数：",rdd.getNumPartitions())
-print("RDD的分区情况：",rdd.glom().collect())
+# https://github.com/mesos/spark/pull/718
+print("默认情况下Spark的最小分区数：", sc.defaultMinPartitions)
+rdd1 = sc.parallelize([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+print("RDD1的分区数：", rdd1.getNumPartitions())
+print("RDD1的分区情况：", rdd1.glom().collect())
+
+print("我们可以直接指定RDD的分区数：")
+rdd2 = sc.parallelize([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], 5)
+print("RDD2的分区数：", rdd2.getNumPartitions())
+print("RDD2的分区情况：", rdd2.glom().collect())
 
 # COMMAND ----------
 
@@ -116,8 +123,9 @@ print("RDD的分区情况：",rdd.glom().collect())
 
 # COMMAND ----------
 
-rdd = sc.parallelize([1,2,3,4,5,6,7,8,9],3).map(lambda x: x * 10)
-rdd.glom().collect()
+rdd = sc.parallelize([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+print("RDD的分区情况：", rdd.glom().collect())
+print("RDD的每个分区的每个元素乘10后的分区情况：", rdd.map(lambda x: x * 10).glom().collect())
 
 # COMMAND ----------
 
@@ -135,7 +143,14 @@ rdd1 = sc.textFile(dfs_endpoint + "/Words.txt")
 rdd2 = rdd1.flatMap(lambda x: x.split(" "))
 rdd3 = rdd2.map(lambda x: (x, 1))
 rdd4 = rdd3.reduceByKey(lambda a, b: a + b)
+
+# COMMAND ----------
+
 rdd4.collect()
+
+# COMMAND ----------
+
+rdd4.toDebugString()
 
 # COMMAND ----------
 

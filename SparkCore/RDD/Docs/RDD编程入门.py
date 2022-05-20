@@ -104,13 +104,13 @@ print(rdd.collect())
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC #### wholeTextFile
+# MAGIC #### wholeTextFiles
 # MAGIC 
 # MAGIC 与`textFile`功能一致，不过`wholeTextFile`更适合读取很多小文件的场景。
 
 # COMMAND ----------
 
-rdd = sc.textFile("/mnt/databrickscontainer1")
+rdd = sc.wholeTextFiles("/mnt/databrickscontainer1")
 print(rdd.collect())
 
 # COMMAND ----------
@@ -374,7 +374,7 @@ print(rdd.filter(lambda x: x > 5).collect())
 
 # COMMAND ----------
 
-rdd = sc.parallelize([0,1,2,0,1,2,0,2,2,0], 2)
+rdd = sc.parallelize([0,1,2,0,1,2,0,2,2,0], 5)
 print(rdd.glom().collect())
 print(rdd.distinct().collect())
 print(rdd.distinct(5).collect())
@@ -397,7 +397,9 @@ print(rdd.distinct(5).collect())
 
 # COMMAND ----------
 
-rdd = sc.parallelize([0,1,2,3,4,5,6,7,8,9])
+rdd = sc.parallelize([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+rdd2 = sc.parallelize([10, 11, 12, 13, 14, 15, 16, 17, 18, 19])
+print(rdd.union(rdd2).collect())
 print(rdd.union(rdd.map(lambda x: (x, x))).collect())
 
 # COMMAND ----------
@@ -444,8 +446,8 @@ print(rdd1.rightOuterJoin(rdd2).collect())
 
 # COMMAND ----------
 
-rdd1 = sc.parallelize([(101,"A"), (102, "B"), (103, "C")])
-rdd2 = sc.parallelize([(102, 90), (104, 95), (103, "C")])
+rdd1 = sc.parallelize([(101, "A"), (102, "B"), (103, "C"), "A", 2])
+rdd2 = sc.parallelize([(102, 90), (104, 95), (103, "C"), "A", 1, 2])
 
 print(rdd1.intersection(rdd2).collect())
 
@@ -525,9 +527,12 @@ print(rdd.sortByKey(False, 2).collect())
 rdd = sc.parallelize([1,2,3,4])
 
 # Can only zip with RDD which has the same number of partitions
+# print(rdd.zip(sc.parallelize(["a","b","c","d"],3)).collect())
+
 # Can only zip RDDs with same number of elements in each partition
-# print(rdd.zip(sc.parallelize(["a","b","c"],3)).collect())
-# print(rdd.zip(sc.parallelize(["a","b","c","d","e"],5)).collect())
+# print(rdd.zip(sc.parallelize(["a","b","c"])).collect())
+# print(rdd.zip(sc.parallelize(["a","b","c","d","e"])).collect())
+
 print(rdd.zip(sc.parallelize(["a","b","c","d"])).collect())
 
 # COMMAND ----------
@@ -772,9 +777,10 @@ print(rdd.countByKey())
 
 # COMMAND ----------
 
-rdd = sc.parallelize(range(1,101),1)
+rdd = sc.parallelize(range(1, 11), 1)
 
-print(rdd.reduce(lambda a,b: a + b))
+print(rdd.reduce(lambda a, b: a + b))
+print(rdd.reduce(lambda a, b: a * b))
 
 # COMMAND ----------
 
@@ -909,9 +915,10 @@ print(sc.parallelize(["a","b","c","e","f","g"],1).takeSample(False,5))
 print(sc.parallelize(["a","b","c","e","f","g"],1).takeSample(False,5, 5))
 print(sc.parallelize(["a","b","c","e","f","g"],1).takeSample(False,5, 5))
 print(sc.parallelize(["a","b","c","e","f","g"],1).takeSample(False,5, 5))
-print(sc.parallelize(["a","b","c","e","f","g"],1).takeSample(False,5, 5))
 # 不同的随机数种子，抽取的结果是不一样的
+print(sc.parallelize(["a","b","c","e","f","g"],1).takeSample(False,5, 5))
 print(sc.parallelize(["a","b","c","e","f","g"],1).takeSample(False,5, 4))
+print(sc.parallelize(["a","b","c","e","f","g"],1).takeSample(False,5, 2))
 
 # COMMAND ----------
 
@@ -930,8 +937,8 @@ print(sc.parallelize(["a","b","c","e","f","g"],1).takeSample(False,5, 4))
 
 # COMMAND ----------
 
-print(sc.parallelize(["aaa","bbbbb","cccc","eee","ff","g"],1).top(3))
-print(sc.parallelize(["aaa","bbbbb","cccc","eee","ff","g"],1).takeOrdered(3, lambda x: -len(x)))
+print(sc.parallelize(["aaa", "eee", "ff", "bbbbb", "g", "cccc"], 1).top(3))
+print(sc.parallelize(["aaa", "eee", "ff", "bbbbb", "g", "cccc"], 1).takeOrdered(3, lambda x: -len(x)))
 
 # COMMAND ----------
 
@@ -970,7 +977,7 @@ print(sc.parallelize(range(1,11),1).foreach(lambda x: x * 2))
 # COMMAND ----------
 
 rdd = sc.parallelize(range(1,11),3)
-print(rdd.glom().collect())
+
 rdd.foreach(lambda x: print(x, type(x)))
 rdd.foreachPartition(lambda x: print(type(x), list(x)))
 
