@@ -162,7 +162,7 @@ Standalone 是完整的Spark运行环境，其中：
 
 * Master角色以Master进程存在
 * Worker角色以Worker进程存在
-* Driver和Executor运行于Worker进程内，由Worker提供资源供给它们运行
+* Driver运行在Master进程内，Executor运行于Worker进程内
 
 Spark架构设计将资源管理单独抽象出一层Cluster Manager，通过这种抽象能够构建一种适合企业当前技术栈的插件式资源管理模块，从而为不同的计算场景提供不同的资源分配与调度策略。
 
