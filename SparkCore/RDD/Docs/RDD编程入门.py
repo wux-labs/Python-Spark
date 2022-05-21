@@ -73,7 +73,7 @@ print("RDD的分区数：", rdd.getNumPartitions())
 # MAGIC 
 # MAGIC 读取文件创建，可以使用以下几个API  
 # MAGIC * textFile
-# MAGIC * wholeTextFile
+# MAGIC * wholeTextFiles
 
 # COMMAND ----------
 
@@ -85,20 +85,20 @@ print("RDD的分区数：", rdd.getNumPartitions())
 # COMMAND ----------
 
 # 读取分布式文件系统上的文件
-rdd = sc.textFile("%s/Words.txt" % dfs_endpoint)
+rdd = sc.textFile("%s/word.txt" % dfs_endpoint)
 print(rdd.collect())
 
 # COMMAND ----------
 
 # 读取Databricks文件系统(DBFS)上的文件
-rdd = sc.textFile("dbfs:/mnt/databrickscontainer1/Words.txt")
+rdd = sc.textFile("dbfs:/mnt/databrickscontainer1/word.txt")
 print(rdd.collect())
 
 # COMMAND ----------
 
 # 读取Databricks文件系统(DBFS)上的文件
 # 可以像访问本地文件一样直接使用绝对路径进行访问
-rdd = sc.textFile("/mnt/databrickscontainer1/Words.txt")
+rdd = sc.textFile("/mnt/databrickscontainer1/word.txt")
 print(rdd.collect())
 
 # COMMAND ----------
@@ -106,7 +106,7 @@ print(rdd.collect())
 # MAGIC %md
 # MAGIC #### wholeTextFiles
 # MAGIC 
-# MAGIC 与`textFile`功能一致，不过`wholeTextFile`更适合读取很多小文件的场景。
+# MAGIC 与`textFile`功能一致，不过`wholeTextFiles`更适合读取很多小文件的场景。
 
 # COMMAND ----------
 
@@ -250,9 +250,9 @@ print(rdd.reduceByKey(lambda a,b: a + b).collect())
 # MAGIC 
 # MAGIC 在我们的WordCount案例中，使用到以下知识点：
 # MAGIC * 程序入口对象是SparkContext对象，sc，主要功能就是创建第一个RDD出来
-# MAGIC   * wordsRDD = sc.textFile("/mnt/databrickscontainer1/Words.txt")
+# MAGIC   * wordsRDD = sc.textFile("/mnt/databrickscontainer1/word.txt")
 # MAGIC * 通过读取文件创建RDD，textFile
-# MAGIC   * wordsRDD = sc.textFile("/mnt/databrickscontainer1/Words.txt")
+# MAGIC   * wordsRDD = sc.textFile("/mnt/databrickscontainer1/word.txt")
 # MAGIC * RDD的特性
 # MAGIC   * wordsRDD -> flatMapRDD -> mapRDD -> resultRDD
 # MAGIC * 三个Transformation算子
@@ -263,7 +263,7 @@ print(rdd.reduceByKey(lambda a,b: a + b).collect())
 # COMMAND ----------
 
 # 第一步、读取本地数据 封装到RDD集合，认为列表List
-wordsRDD = sc.textFile("/mnt/databrickscontainer1/Words.txt")
+wordsRDD = sc.textFile("/mnt/databrickscontainer1/word.txt")
 # 第二步、处理数据 调用RDD中函数，认为调用列表中的函数
 # a. 每行数据分割为单词
 flatMapRDD = wordsRDD.flatMap(lambda line: line.split(" "))
