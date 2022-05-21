@@ -5,6 +5,18 @@
 # COMMAND ----------
 
 # MAGIC %md
+# MAGIC 环境初始化
+# MAGIC > 首先执行环境的初始化。  
+# MAGIC > 将存储账户与Spark环境关联，以便于在Spark程序中可以使用存储。  
+# MAGIC > `dfs_endpoint` 是文件系统的根端点。  
+
+# COMMAND ----------
+
+# MAGIC %run "../../initialization"
+
+# COMMAND ----------
+
+# MAGIC %md
 # MAGIC ## DataFrame的组成
 # MAGIC 
 # MAGIC DataFrame是一个二维表结构，那么表结构就应该有：
@@ -255,11 +267,11 @@ spark.read.csv("/mnt/databrickscontainer1/restaurant-1-orders.csv", header=True)
 # 由于没有现成的文件，所以我们只能造一个
 df = spark.read.csv("/mnt/databrickscontainer1/restaurant-1-orders.csv", header=True)
 
-df.where("Quantity=20").write.mode("overwrite").json("/mnt/databrickscontainer1/restaurant-1-orders.json")
+df.write.mode("overwrite").format("json").save("/mnt/databrickscontainer1/restaurant-1-orders-json")
 
 # COMMAND ----------
 
-df = spark.read.format("json").load("/mnt/databrickscontainer1/restaurant-1-orders.json")
+df = spark.read.format("json").load("/mnt/databrickscontainer1/restaurant-1-orders-json")
 
 print(type(df))
 df.printSchema()
@@ -268,7 +280,7 @@ df.show(truncate=False)
 # COMMAND ----------
 
 # 将 read.format("json").load(path) 合并为 read.json(path)
-spark.read.json("/mnt/databrickscontainer1/restaurant-1-orders.json").show(truncate=False)
+spark.read.json("/mnt/databrickscontainer1/restaurant-1-orders-json").show(truncate=False)
 
 # COMMAND ----------
 
@@ -300,12 +312,11 @@ spark.read.json("/mnt/databrickscontainer1/restaurant-1-orders.json").show(trunc
 # 由于没有现成的文件，所以我们只能构造一个
 df = spark.read.csv("/mnt/databrickscontainer1/restaurant-1-orders.csv", header=True)
 
-# df.where("Quantity=5").write.mode("overwrite").parquet("/mnt/databrickscontainer1/restaurant-1-orders-parquet")
+df.selectExpr("`Order Number` as OrderNumber","`Order Date` as OrderDate","`Item Name` as ItemName","cast(Quantity as int) as Quantity","cast(`Product Price` as double) as ProductPrice","cast(`Total products` as int) as TotalProducts").write.mode("overwrite").parquet("/mnt/databrickscontainer1/restaurant-1-orders-parquet")
 
-# df.where("Quantity=10").write.mode("overwrite").orc("/mnt/databrickscontainer1/restaurant-1-orders-orc")
-df.selectExpr("`Order Number` as OrderNumber","`Order Date` as OrderDate","`Item Name` as ItemName","Quantity","`Product Price` as ProductPrice","`Total products` as TotalProducts").write.mode("overwrite").format("avro").save("/mnt/databrickscontainer1/restaurant-1-orders-avro")
-# df.write.mode("overwrite").format("avro").save("/mnt/databrickscontainer1/restaurant-1-orders-avro")
+df.selectExpr("`Order Number` as OrderNumber","`Order Date` as OrderDate","`Item Name` as ItemName","cast(Quantity as int) as Quantity","cast(`Product Price` as double) as ProductPrice","cast(`Total products` as int) as TotalProducts").write.mode("overwrite").orc("/mnt/databrickscontainer1/restaurant-1-orders-orc")
 
+df.selectExpr("`Order Number` as OrderNumber","`Order Date` as OrderDate","`Item Name` as ItemName","cast(Quantity as int) as Quantity","cast(`Product Price` as double) as ProductPrice","cast(`Total products` as int) as TotalProducts").write.mode("overwrite").format("avro").save("/mnt/databrickscontainer1/restaurant-1-orders-avro")
 
 # COMMAND ----------
 
@@ -483,8 +494,53 @@ df = spark.read.format("csv").load("/mnt/databrickscontainer1/restaurant-1-order
 df.select(df["Order Number"], df["Order Date"]).show()
 # 使用List[Column]对象
 df.select([df["Order Number"], df["Order Date"], df["Item Name"]]).show()
+
+# 使用可变参数的str对象
+df.select("Order Number", "Order Date").show()
 # 使用List[str]对象
 df.select(["Order Number", "Order Date", "Item Name", "Quantity"]).show()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### selectExpr
+# MAGIC 
+# MAGIC 功能：投影一组 SQL 表达式并返回新的 DataFrame，这是 select 的一个变体，它接受 SQL 表达式。
+# MAGIC 
+# MAGIC 语法：  
+# MAGIC df.selectExpr(\*expr)
+# MAGIC 
+# MAGIC 可传递：
+# MAGIC * 可变参数的SQL表达式
+
+# COMMAND ----------
+
+# 直接查询字段
+df.select("Quantity").show(5)
+# df.select(df["Quantity"]).show(5)
+
+# 字段的简单运算，如何实现？
+# df.select(df["Quantity"] + 2).show(5)
+# df.select("Quantity" + 2).show(5)
+# df.select("Quantity + 2").show(5)
+
+# 字段别名等复杂操作如何实现？
+# df.select(df["Quantity"].alias("SHULIANG")).show(5)
+# df.select("Quantity as SHULIANG").show(5)
+
+# COMMAND ----------
+
+# 直接查询字段
+# df.select("Quantity").show(5)
+# df.select(df["Quantity"]).show(5)
+
+# 字段的简单运算，如何实现？
+# df.select(df["Quantity"] + 2).show(5)
+df.selectExpr("Quantity + 2").show(5)
+
+# 字段别名等复杂操作如何实现？
+# df.select(df["Quantity"].alias("SHULIANG")).show(5)
+df.selectExpr("Quantity as SHULIANG").show(5)
 
 # COMMAND ----------
 
@@ -513,7 +569,8 @@ df.select(df["Order Number"]).distinct().show()
 # MAGIC df.filter()  
 # MAGIC df.where()
 # MAGIC 
-# MAGIC > where和filter在功能上是等价的。
+# MAGIC > where和filter在功能上是等价的。  
+# MAGIC > :func:`where` is an alias for :func:`filter`.
 
 # COMMAND ----------
 
@@ -574,23 +631,47 @@ df.groupBy("Item_Name").avg().show()
 
 # COMMAND ----------
 
+df = spark.read.parquet("/mnt/databrickscontainer1/restaurant-1-orders-parquet")
+
+df.groupBy("Quantity").count().show()
+df.groupBy("ItemName").count().show()
+
+df.groupBy("ItemName").min("Quantity").show()
+df.groupBy("ItemName").max("Quantity").show()
+df.groupBy("ItemName").sum("Quantity").show()
+df.groupBy("ItemName").avg("Quantity").show()
+
+# COMMAND ----------
+
 # MAGIC %md
-# MAGIC #### orderBy
+# MAGIC #### sort和orderBy
 # MAGIC 
 # MAGIC 功能：对DataFrame的数据进行排序。
 # MAGIC 
 # MAGIC 语法：  
-# MAGIC df.orderBy(\*cols, \*kwargs)  
+# MAGIC df.sort(\*cols, \*kwargs)  
 # MAGIC * cols：排序的列。
 # MAGIC * kwargs：排序参数，用于指定是顺序排序还是倒序排序，接受boolean或List(boolean)。如果是List，则元素个数应该与cols的元素个数相同。
+# MAGIC 
+# MAGIC > orderBy = sort
 
 # COMMAND ----------
 
-df = spark.read.format("csv").load("/mnt/databrickscontainer1/restaurant-1-orders.csv", header=True)
+df = spark.read.parquet("/mnt/databrickscontainer1/restaurant-1-orders-parquet")
 
 df.show()
 
-df.orderBy(df["Item Name"]).show()
+# COMMAND ----------
+
+df.sort("ItemName").show()
+df.sort(df["ItemName"], ascending=False).show()
+df.sort(["ItemName","TotalProducts"], ascending=[False,False]).show()
+
+# COMMAND ----------
+
+df.orderBy("ItemName").show()
+df.orderBy(df["ItemName"], ascending=False).show()
+df.orderBy(["ItemName","TotalProducts"], ascending=[False,False]).show()
 
 # COMMAND ----------
 
@@ -605,10 +686,60 @@ df.orderBy(df["Item Name"]).show()
 
 # COMMAND ----------
 
-df = spark.read.format("csv").load("/mnt/databrickscontainer1/restaurant-1-orders.csv", header=True)
+df = spark.read.parquet("/mnt/databrickscontainer1/restaurant-1-orders-parquet")
 
 df.show()
 df.limit(5).show()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### alias
+# MAGIC 
+# MAGIC 功能：返回一个带有别名的DataFrame，并且可以根据别名访问DataFrame中的数据。
+# MAGIC 
+# MAGIC 语法：  
+# MAGIC df.alias(alias)
+# MAGIC * alias：指定别名的名称
+
+# COMMAND ----------
+
+df = spark.read.parquet("/mnt/databrickscontainer1/restaurant-1-orders-parquet")
+
+df2 = df.alias("df_name")
+df2.printSchema()
+df2.show()
+df2.select("df_name.ItemName").show()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### join
+# MAGIC 
+# MAGIC 功能：将两个DataFrame进行关联操作返回新的DataFrame。
+# MAGIC 
+# MAGIC 语法：  
+# MAGIC df.join(other, on=None, how=None)
+# MAGIC * other：与df进行join操作的另一个DataFrame
+# MAGIC * on：join操作的关联条件
+# MAGIC * how：join操作的关联方式，支持 inner、outer、cross、full、fullouter、left、leftouter、right、rightouter、semi、anti、...
+# MAGIC   * 默认是 inner
+
+# COMMAND ----------
+
+from pyspark.sql.functions import col
+df = spark.read.parquet("/mnt/databrickscontainer1/restaurant-1-orders-parquet")
+
+display(df)
+
+df1 = df.where("OrderNumber in ('16116','16117')").alias("df1_name")
+df2 = df.where("OrderNumber in ('16117','16118')").alias("df2_name")
+
+display(df1.join(df2))
+display(df1.join(df2,"OrderNumber"))
+display(df1.join(df2,["OrderNumber","ItemName"]))
+display(df1.join(df2,["OrderNumber","ItemName"],"left"))
+display(df1.join(df2,[col("df1_name.OrderNumber") == col("df2_name.OrderNumber"),col("df1_name.ItemName") == col("df2_name.ItemName")],"right"))
 
 # COMMAND ----------
 
@@ -635,7 +766,7 @@ df.limit(5).show()
 
 # COMMAND ----------
 
-df = spark.read.format("csv").load("/mnt/databrickscontainer1/restaurant-1-orders.csv", header=True)
+df = spark.read.parquet("/mnt/databrickscontainer1/restaurant-1-orders-parquet")
 
 df.createTempView("temp_orders")
 # Temporary view 'temp_orders' already exists
@@ -657,6 +788,16 @@ spark.sql("select * from global_temp.temp_orders_global").show()
 
 # MAGIC %sql
 # MAGIC select * from temp_orders
+
+# COMMAND ----------
+
+df = spark.read.parquet("/mnt/databrickscontainer1/restaurant-1-orders-parquet")
+
+df.createTempView("orders")
+spark.sql("select ItemName,Quantity from orders").show()
+spark.sql("select ItemName,max(Quantity),min(Quantity),sum(Quantity) from orders group by ItemName").show()
+spark.sql("select ItemName,max(Quantity) as MaxQuantity,min(Quantity) as MinQuantity,sum(Quantity) from orders group by ItemName").show()
+spark.sql("select ItemName,Quantity,Quantity+5,Quantity*5 from orders").show()
 
 # COMMAND ----------
 
@@ -699,13 +840,17 @@ import pyspark.sql.functions as F
 
 import pyspark.sql.functions as F
 
-df = spark.read.format("jdbc").option("url","jdbc:mysql://wux-mysql.mysql.database.azure.com:3306/spark?useSSL=true&requireSSL=false").option("user","wux_labs@wux-mysql").option("password","Pa55w.rd").option("query","select * from spark_read_test").load()
+df = spark.read.parquet("/mnt/databrickscontainer1/restaurant-1-orders-parquet")
 
 df.printSchema()
-
 df.show()
 
-df.select(F.count("Total_products"), F.max("Total_products"), F.min("Total_products"), F.sum("Total_products"), F.avg("Total_products"), F.mean("Total_products")).show()
+df.select(F.count("TotalProducts"), F.max("TotalProducts"), F.min("TotalProducts"), F.sum("TotalProducts"),
+          F.avg("TotalProducts"), F.mean("TotalProducts")).show()
+
+df.createOrReplaceTempView("orders")
+spark.sql("select count(TotalProducts),max(TotalProducts),min(TotalProducts),sum(TotalProducts),avg(TotalProducts),mean(TotalProducts) from orders").show()
+
 
 # COMMAND ----------
 
@@ -733,15 +878,19 @@ df.select(F.count("Total_products"), F.max("Total_products"), F.min("Total_produ
 
 import pyspark.sql.functions as F
 
-df = spark.read.format("jdbc").option("url","jdbc:mysql://wux-mysql.mysql.database.azure.com:3306/spark?useSSL=true&requireSSL=false").option("user","wux_labs@wux-mysql").option("password","Pa55w.rd").option("query","select * from spark_read_test").load()
+df = spark.read.parquet("/mnt/databrickscontainer1/restaurant-1-orders-parquet")
 
 df.printSchema()
-
 df.show()
 
-display(df.select(F.abs("Total_products"), F.exp("Total_products"), F.sqrt("Total_products"), F.sin("Total_products"), F.cos("Total_products"), F.abs(F.cos("Total_products")), F.rand()))
+display(df.select(F.abs("TotalProducts"), F.exp("TotalProducts"), F.sqrt("TotalProducts"), F.sin("TotalProducts"), F.cos("TotalProducts"), F.abs(F.cos("TotalProducts")), F.rand()))
 
-display(df.select(F.round("Total_products"), F.round(F.cos("Total_products")), F.ceil("Total_products"), F.ceil(F.cos("Total_products")), F.floor("Total_products"), F.floor(F.cos("Total_products")), F.cbrt("Total_products")))
+display(df.select(F.round("TotalProducts"), F.round(F.cos("TotalProducts")), F.ceil("TotalProducts"), F.ceil(F.cos("TotalProducts")), F.floor("TotalProducts"), F.floor(F.cos("TotalProducts")), F.cbrt("TotalProducts")))
+
+df.createOrReplaceTempView("orders")
+display(spark.sql("select abs(TotalProducts),exp(TotalProducts),sqrt(TotalProducts),sin(TotalProducts),cos(TotalProducts),abs(cos(TotalProducts)),rand() from orders"))
+display(spark.sql("select round(TotalProducts),round(cos(TotalProducts)),ceil(TotalProducts),ceil(cos(TotalProducts)),floor(TotalProducts),floor(cos(TotalProducts)),cbrt(TotalProducts) from orders"))
+
 
 # COMMAND ----------
 
@@ -765,10 +914,14 @@ display(df.select(F.round("Total_products"), F.round(F.cos("Total_products")), F
 
 import pyspark.sql.functions as F
 
-df = spark.read.format("jdbc").option("url","jdbc:mysql://wux-mysql.mysql.database.azure.com:3306/spark?useSSL=true&requireSSL=false").option("user","wux_labs@wux-mysql").option("password","Pa55w.rd").option("query","select * from spark_read_test").load()
+df = spark.read.parquet("/mnt/databrickscontainer1/restaurant-1-orders-parquet")
 
 # current_date、current_timestamp、date_add、date_sub、datediff、dayofmonth、dayofweek、dayofyear、last_day、year、month
 display(df.select(F.current_date(), F.current_timestamp(), F.date_add(F.current_date(), 5), F.date_sub(F.current_date(), 5), F.datediff(F.date_add(F.current_date(), 5), F.date_sub(F.current_date(), 5)), F.dayofmonth(F.current_date()), F.dayofweek(F.current_date()), F.dayofyear(F.current_date()), F.last_day(F.current_date()), F.year(F.current_date()), F.month(F.current_date())))
+
+df.createOrReplaceTempView("orders")
+display(spark.sql("select current_date(), current_timestamp(), date_add(current_date(), 5), date_sub(current_date(), 5), datediff(date_add(current_date(), 5), date_sub(current_date(), 5)), dayofmonth(current_date()), dayofweek(current_date()), dayofyear(current_date()), last_day(current_date()), year(current_date()), month(current_date()) from orders"))
+
 
 # COMMAND ----------
 
@@ -809,12 +962,12 @@ display(df.select(F.current_date(), F.current_timestamp(), F.date_add(F.current_
 
 # COMMAND ----------
 
-df = spark.read.format("csv").load("/mnt/databrickscontainer1/restaurant-1-orders.csv", header=True)
+df = spark.read.parquet("/mnt/databrickscontainer1/restaurant-1-orders-parquet")
 
-df.createTempView("restaurant_orders")
+df.createOrReplaceTempView("orders")
 
 # 先看一下原始数据
-spark.sql("select * from restaurant_orders").show()
+spark.sql("select * from orders").show()
 
 # COMMAND ----------
 
@@ -825,25 +978,25 @@ spark.sql("select * from restaurant_orders").show()
 
 # MAGIC %sql
 # MAGIC -- 对全表按“订单日期”字段排序，返回行号
-# MAGIC select *,  row_number() over(order by `Order Date` desc) as rn from restaurant_orders;
+# MAGIC select *,  row_number() over(order by OrderDate desc) as rn from orders;
 
 # COMMAND ----------
 
 # MAGIC %sql
 # MAGIC -- 按“项目名称”进行分组，按“订单日期”字段排序，返回分组行号
-# MAGIC select *,  row_number() over(partition by `Item Name` order by `Order Date` desc) as rn2 from restaurant_orders;
+# MAGIC select *,  row_number() over(partition by ItemName order by OrderDate desc) as rn2 from orders;
 
 # COMMAND ----------
 
 # MAGIC %sql
 # MAGIC -- 对全表按“订单日期”字段排序，返回分组排序
-# MAGIC select *, rank() over(order by `Order Date`) as rn1, dense_rank() over(order by `Order Date`) as rn2 from restaurant_orders;
+# MAGIC select *, rank() over(order by OrderDate) as rn1, dense_rank() over(order by OrderDate) as rn2 from orders;
 
 # COMMAND ----------
 
 # MAGIC %sql
 # MAGIC -- 按“项目名称”进行分组，按“数量”字段排序，返回分组排序
-# MAGIC select *, rank() over(partition by `Item Name` order by `Quantity`) as rn1, dense_rank() over(partition by `Item Name` order by `Quantity`) as rn2 from restaurant_orders;
+# MAGIC select *, rank() over(partition by ItemName order by Quantity) as rn1, dense_rank() over(partition by ItemName order by Quantity) as rn2 from orders;
 
 # COMMAND ----------
 
@@ -854,13 +1007,13 @@ spark.sql("select * from restaurant_orders").show()
 
 # MAGIC %sql
 # MAGIC -- 对全表按“订单日期”字段排序，对产品价格进行聚合
-# MAGIC select *, sum(cast(`Product Price` as double)) over(order by `Order Date`) as s, count(cast(`Product Price` as double)) over(order by `Order Date`) as c, avg(cast(`Product Price` as double)) over(order by `Order Date`) as a from restaurant_orders;
+# MAGIC select *, sum(cast(ProductPrice as double)) over(order by OrderDate) as s, count(cast(ProductPrice as double)) over(order by OrderDate) as c, avg(cast(ProductPrice as double)) over(order by OrderDate) as a from orders;
 
 # COMMAND ----------
 
 # MAGIC %sql
 # MAGIC -- 按“项目名称”进行分组，按“数量”字段排序，对产品价格进行聚合
-# MAGIC select *, sum(cast(`Product Price` as double)) over(partition by `Item Name` order by `Quantity`) as s, count(cast(`Product Price` as double)) over(partition by `Item Name` order by `Quantity`) as c, avg(cast(`Product Price` as double)) over(partition by `Item Name` order by `Quantity`) as a from restaurant_orders;
+# MAGIC select *, sum(cast(ProductPrice as double)) over(partition by ItemName order by Quantity) as s, count(cast(ProductPrice as double)) over(partition by ItemName order by Quantity) as c, avg(cast(ProductPrice as double)) over(partition by ItemName order by Quantity) as a from orders;
 
 # COMMAND ----------
 
@@ -925,23 +1078,23 @@ udf3 = F.udf(price_add_5, DoubleType())
 
 # MAGIC %sql
 # MAGIC -- 通过方式1定义的UDF的参数1可以用于SQL风格
-# MAGIC select t.*, udf1(`Product Price`) from restaurant_orders t
+# MAGIC select t.*, udf1(ProductPrice) from orders t
 
 # COMMAND ----------
 
 # 通过方式1定义的UDF的返回值可以用于DSL风格
-df.select("`Product Price`", udf2("`Product Price`")).show()
+df.select("ProductPrice", udf2("ProductPrice")).show()
 
 # COMMAND ----------
 
 # 通过方式2定义的UDF的返回值可以用于DSL风格
-df.select("`Product Price`", udf3("`Product Price`")).show()
+df.select("ProductPrice", udf3("ProductPrice")).show()
 
 # COMMAND ----------
 
 # MAGIC %sql
 # MAGIC -- 但是，通过方式2定义的UDF不可以用于SQL风格
-# MAGIC select t.*, udf3(`Product Price`) from restaurant_orders t
+# MAGIC select t.*, udf3(ProductPrice) from orders t
 
 # COMMAND ----------
 
@@ -994,7 +1147,7 @@ df.select("`Product Price`", udf3("`Product Price`")).show()
 # MAGIC %scala
 # MAGIC // 由于单个产品的价格是相同的，所以取最大值、最小值的结果是一样的，求平均就没什么意义
 # MAGIC // 所以我们将单价乘以数量，得到的是每个订单的购买总价，由于订单中的数量不同，所以总价就不同，可以看出效果
-# MAGIC spark.sql("select `Item Name`, avg(Quantity * `Product Price`) as avg, max(Quantity * `Product Price`) as max, min(Quantity * `Product Price`) as min, MyAvg(Quantity * `Product Price`) as myavg from restaurant_orders group by `Item Name`").show()
+# MAGIC spark.sql("select ItemName, avg(Quantity * ProductPrice) as avg, max(Quantity * ProductPrice) as max, min(Quantity * ProductPrice) as min, MyAvg(Quantity * ProductPrice) as myavg from orders group by ItemName").show()
 
 # COMMAND ----------
 
@@ -1200,10 +1353,6 @@ df = spark.read.csv("/mnt/databrickscontainer1/restaurant-1-orders.csv", schema=
 
 # COMMAND ----------
 
-df = spark.read.csv("/mnt/databrickscontainer1/restaurant-1-orders.csv", header=True)
-
-# COMMAND ----------
-
 # MAGIC %md
 # MAGIC ### 文本类型数据文件
 # MAGIC 
@@ -1220,12 +1369,12 @@ df = spark.read.csv("/mnt/databrickscontainer1/restaurant-1-orders.csv", header=
 
 # COMMAND ----------
 
-df.select("Item Name").write.mode("overwrite").format("text").save("/mnt/databrickscontainer1/restaurant-1-orders-text")
+df.select("ItemName").write.mode("overwrite").format("text").save("/mnt/databrickscontainer1/restaurant-1-orders-text")
 
 # COMMAND ----------
 
 # 将 write.format("text").save(path) 合并为 write.text(path)
-df.select("Item Name").write.mode("overwrite").text("/mnt/databrickscontainer1/restaurant-1-orders-text")
+df.select("ItemName").write.mode("overwrite").text("/mnt/databrickscontainer1/restaurant-1-orders-text")
 
 # COMMAND ----------
 
@@ -1278,7 +1427,7 @@ df.write.mode("overwrite").orc("/mnt/databrickscontainer1/restaurant-1-orders-or
 
 # COMMAND ----------
 
-df.selectExpr("`Order Number` as OrderNumber","`Order Date` as OrderDate","`Item Name` as ItemName","Quantity","`Product Price` as ProductPrice","`Total products` as TotalProducts").write.mode("overwrite").format("avro").save("/mnt/databrickscontainer1/restaurant-1-orders-avro")
+df.write.mode("overwrite").format("avro").save("/mnt/databrickscontainer1/restaurant-1-orders-avro")
 
 # COMMAND ----------
 
