@@ -926,6 +926,72 @@ display(spark.sql("select current_date(), current_timestamp(), date_add(current_
 # COMMAND ----------
 
 # MAGIC %md
+# MAGIC #### 炸裂函数
+# MAGIC 
+# MAGIC **explode**
+# MAGIC * explode(expr)：通过取消嵌套 expr 返回行。expr：一个 ARRAY 或 MAP 或表达式
+
+# COMMAND ----------
+
+import pyspark.sql.functions as F
+
+df = spark.read.parquet("/mnt/databrickscontainer1/restaurant-1-orders-parquet")
+
+df.where("OrderNumber = 16118").createOrReplaceTempView("orders")
+
+display(spark.sql("select * from orders"))
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC -- 将Array数据炸裂成多行
+# MAGIC select explode(array(10,20,30)),t.* from orders t
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC -- 将Map数据炸裂成多行
+# MAGIC select explode(map(10,'10a',20,'20a',30,'30a')),t.* from orders t
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC -- 根据表达式结果炸裂成多行，需要表达式的返回结果是Array或Map
+# MAGIC select explode(split(ItemName, " ")),t.* from orders t
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### 判断相关的函数
+# MAGIC 
+# MAGIC **is distinct from、isfalse、isnan、isnotnull、isnull、istrue、forall**
+# MAGIC * is distinct from：判断两个表达式是否具有不同的值
+# MAGIC * isfalse：判断表达式的值是否是false
+# MAGIC * isnan：判断表达式是否是 NaN
+# MAGIC * isnotnull：判断表达式是否非空，等效于 is not null
+# MAGIC * isnull：判断表达式是否是空，等效于 is null
+# MAGIC * istrue：判断表达式的值是否是true
+# MAGIC * forall：判断表达式是否对数组中的所有元素都有效
+# MAGIC 
+# MAGIC > 由于判断中包含对空值、NaN等的判断，所以我们切换一下数据集，不使用`restaurant-1-orders`，而是使用`泰坦尼克号数据集`进行
+
+# COMMAND ----------
+
+df = spark.read.csv("/mnt/databrickscontainer1/taitanic_train.csv", header=True)
+
+df.createOrReplaceTempView("taitanic")
+
+# 先看一下原始数据
+display(spark.sql("select * from taitanic"))
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC select age, case when age is null then 'NaN' else age end as age1, age is distinct from 22, age is not distinct from 22, isnan(age), isnan(cast(case when age is null then 'NaN' else age end as double)) as age_nan,isnotnull(age), isnull(age), embarked, forall(array(embarked), x -> x in ('S','C','Q')) as for1, forall(array(embarked), x -> x in ('S','C')) as for2 from taitanic
+
+# COMMAND ----------
+
+# MAGIC %md
 # MAGIC ### 窗口函数
 # MAGIC 
 # MAGIC **窗口：** 可以理解为满足指定条件的数据记录的集合。
@@ -1220,6 +1286,19 @@ dfTest.dropDuplicates(["Item Name", "Order Date"]).show()
 
 # COMMAND ----------
 
+df = spark.read.parquet("/mnt/databrickscontainer1/restaurant-1-orders-parquet")
+
+display(df)
+
+display(df.select("OrderNumber","OrderDate"))
+display(df.select("OrderNumber","OrderDate").dropDuplicates())
+
+display(df.orderBy("OrderNumber"))
+display(df.orderBy("OrderNumber").dropDuplicates(["OrderNumber"]))
+display(df.where("OrderNumber = 10001"))
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC #### 删除有缺失值的行
 # MAGIC 
@@ -1249,7 +1328,7 @@ display(df.dropna())
 # 指定需要有3列是有效数据的才保留，由于泰坦尼克号数据集有12个字段，都满足3个有效字段，所以不会删除数据
 display(df.dropna(thresh=3))
 
-# 泰坦尼克号数据中有空置的字段是 "Age", "Cabin", "Embarked"
+# 泰坦尼克号数据中有空值的字段是 "Age", "Cabin", "Embarked"
 # 指定4个字段中有3个有效则保留，则会允许一个字段为null的数据留下来
 display(df.dropna(thresh=3, subset=["Sex", "Age", "Cabin", "Embarked"]))
 
