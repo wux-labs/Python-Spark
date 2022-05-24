@@ -124,8 +124,10 @@ export JAVA_HOME=/home/hadoop/apps/java
 所以需要在宿主机的 `/home/hadoop/apps` 目录下创建 `java` 目录，并将 Java 8+ 安装在该目录下。这里我们不使用宿主机本身的 Java 环境，而是单独安装一个，因为挂载到容器的时候需要保证安装路径在容器内也存在，通过以下命令创建一个软链接指向Java安装路径即可。
 
 ```
-tar xzf softs/
-ln -s /usr/local/jdk1.8.0_201 apps/java
+tar -xzf softs/jdk1.8.0_201.tgz -C apps/
+cd apps
+ln -s jdk1.8.0_201 apps/java
+ls -al
 ```
 
 ![image-20220411233723751](images/image-20220411233723751.png)

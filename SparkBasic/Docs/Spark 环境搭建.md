@@ -272,7 +272,7 @@ scala> sc.parallelize(List(1,2,3,4,5)).map(x => x * 2).collect()
 
 ![image-20220414093920069](images/image-20220414093920069.png)
 
-从图中可以看到Spark Application运行到集群上时，由两部分组成：Driver Program和Executors。
+Spark Application运行到集群上时，由两部分组成：Driver Program和Executors。
 
 **Driver Program**
 
