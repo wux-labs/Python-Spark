@@ -1397,6 +1397,51 @@ display(df.fillna({"Age": 99, "Cabin": "cabin_loss", "Embarked": "Z"}))
 # COMMAND ----------
 
 # MAGIC %md
+# MAGIC ## DataFrame的持久化
+# MAGIC 
+# MAGIC 在学习SparkCore的时候，我们知道RDD的数据是过程数据，在下一次要用到RDD的数据的时候，再根据血缘关系，从头重新处理一遍RDD的数据。
+# MAGIC 
+# MAGIC 在SparkSQL模块中，DataFrame的数据也是过程数据。
+
+# COMMAND ----------
+
+import pyspark.sql.functions as F
+
+df = spark.read.parquet("/mnt/databrickscontainer1/restaurant-1-orders-parquet")
+
+df.show()
+
+df.createOrReplaceTempView("orders")
+
+df2 = spark.sql("select OrderNumber, ItemName, current_timestamp() as tm from orders")
+
+df3 = df2.select("OrderNumber","ItemName","tm", F.dayofyear("tm"))
+
+# COMMAND ----------
+
+display(df3)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC 
+# MAGIC 多执行几次上面的代码，可以看到df3的数据一直都在发生变化，可以知道DataFrame的数据也需要从头处理一遍。
+# MAGIC 
+# MAGIC DataFrame也像RDD一样可以进行数据持久化，同样提供了`cache`、`persist`、`checkpoint`来进行数据的持久化。
+# MAGIC 
+# MAGIC 我们将df2或df3进行持久化后，上面的数据就不会发生变化了。
+
+# COMMAND ----------
+
+df2.cache()
+
+# COMMAND ----------
+
+display(df3)
+
+# COMMAND ----------
+
+# MAGIC %md
 # MAGIC ## DataFrame的数据写出
 # MAGIC 
 # MAGIC 与读取外部数据相对应，可以通过SparkSQL的统一API进行DataFrame数据的写出。
