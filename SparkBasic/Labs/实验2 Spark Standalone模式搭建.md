@@ -143,7 +143,7 @@ export SPARK_HOME=/home/hadoop/apps/spark
 所以需要在宿主机的 `/home/hadoop/apps` 目录下创建 `spark` 目录，并将Spark程序安装在该目录下。同样，由于宿主机已经安装好了Spark，所以我们不需要重复安装，通过以下命令创建一个软链接指向Spark安装路径即可。
 
 ```
-ln -s apps/spark-3.2.1-bin-hadoop3.2 apps/spark
+ln -s spark-3.2.1-bin-hadoop3.2 spark
 ```
 
 ![image-20220411234157327](images/image-20220411234157327.png)
