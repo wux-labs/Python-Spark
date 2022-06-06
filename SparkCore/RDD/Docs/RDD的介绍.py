@@ -139,7 +139,7 @@ print("RDD的每个分区的每个元素乘10后的分区情况：", rdd.map(lam
 
 # COMMAND ----------
 
-rdd1 = sc.textFile(dfs_endpoint + "/Words.txt")
+rdd1 = sc.textFile(dfs_endpoint + "/word.txt")
 rdd2 = rdd1.flatMap(lambda x: x.split(" "))
 rdd3 = rdd2.map(lambda x: (x, 1))
 rdd4 = rdd3.reduceByKey(lambda a, b: a + b)
@@ -162,7 +162,8 @@ rdd4.toDebugString()
 # MAGIC Key-Value RDD：RDD中存储的是二元组，比如：("spark", 3.2)。  
 # MAGIC 默认分区器：Hash分区规则。  
 # MAGIC 可以手动设置分区规则（rdd.partitionBy的方法来设置）。  
-# MAGIC 由于不是所有RDD都是Key-Value型的，所以这个特性是可选的。
+# MAGIC 
+# MAGIC > 由于不是所有RDD都是Key-Value型的，所以这个特性是可选的。
 
 # COMMAND ----------
 
