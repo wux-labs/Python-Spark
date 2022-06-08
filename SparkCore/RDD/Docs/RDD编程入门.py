@@ -86,20 +86,32 @@ print("RDD的分区数：", rdd.getNumPartitions())
 
 # 读取分布式文件系统上的文件
 rdd = sc.textFile("%s/word.txt" % dfs_endpoint)
+
+print(type(rdd))
+print(rdd)
 print(rdd.collect())
+print(rdd.getNumPartitions())
 
 # COMMAND ----------
 
 # 读取Databricks文件系统(DBFS)上的文件
 rdd = sc.textFile("dbfs:/mnt/databrickscontainer1/word.txt")
+
+print(type(rdd))
+print(rdd)
 print(rdd.collect())
+print(rdd.getNumPartitions())
 
 # COMMAND ----------
 
 # 读取Databricks文件系统(DBFS)上的文件
 # 可以像访问本地文件一样直接使用绝对路径进行访问
 rdd = sc.textFile("/mnt/databrickscontainer1/word.txt")
+
+print(type(rdd))
+print(rdd)
 print(rdd.collect())
+print(rdd.getNumPartitions())
 
 # COMMAND ----------
 
@@ -111,7 +123,11 @@ print(rdd.collect())
 # COMMAND ----------
 
 rdd = sc.wholeTextFiles("/mnt/databrickscontainer1")
+
+print(type(rdd))
+print(rdd)
 print(rdd.collect())
+print(rdd.getNumPartitions())
 
 # COMMAND ----------
 
