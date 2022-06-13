@@ -181,6 +181,11 @@ print(rdd.getNumPartitions())
 # MAGIC ```
 # MAGIC rdd.map(func)
 # MAGIC ```
+# MAGIC > func: f:(T) -> U  
+# MAGIC f: 表示这是一个函数/方法  
+# MAGIC (T) -> U 表示的是方法定义  
+# MAGIC (T) 表示参数列表  
+# MAGIC U 表示返回值
 
 # COMMAND ----------
 
@@ -236,7 +241,7 @@ print(rdd.flatMap(lambda x: x.split(" ")).collect())
 
 # COMMAND ----------
 
-rdd = sc.parallelize([("a", 1),("b", 1), ("a", 2), ("b", 2), ("a", 3)])
+rdd = sc.parallelize([("a", 1), ("b", 1), ("a", 2), ("b", 2), ("a", 3)])
 print(rdd.collect())
 print(rdd.mapValues(lambda x: x * 2).collect())
 
@@ -252,11 +257,12 @@ print(rdd.mapValues(lambda x: x * 2).collect())
 # MAGIC rdd.reduceByKey(func)
 # MAGIC ```
 # MAGIC 
-# MAGIC > func 函数只复制处理聚合逻辑，不负责分组
+# MAGIC > func: (V, V) -> V  
+# MAGIC func 函数只负责处理聚合逻辑，不负责分组
 
 # COMMAND ----------
 
-rdd = sc.parallelize([("a", 1),("b", 1), ("a", 2), ("b", 2), ("a", 3)])
+rdd = sc.parallelize([("a", 1), ("b", 1), ("a", 2), ("b", 2), ("a", 3)])
 print(rdd.reduceByKey(lambda a,b: a + b).collect())
 
 # COMMAND ----------
