@@ -310,7 +310,7 @@ print(resultRDD.collect())
 
 # COMMAND ----------
 
-rdd = sc.parallelize([0,1,2,3,4,5,6,7,8,9],3)
+rdd = sc.parallelize([0,1,2,3,4,5,6,7,8,9])
 
 print(rdd.collect())
 print(rdd.glom().collect())
@@ -338,6 +338,13 @@ rdd = sc.parallelize([0,1,2,3,4,5,6,7,8,9])
 # ResultIterable
 print(rdd.groupBy(lambda x: "group {}".format(x % 3)).collect())
 print(rdd.groupBy(lambda x: "group {}".format(x % 3)).map(lambda x: (x[0], list(x[1]))).collect())
+
+# COMMAND ----------
+
+rdd = sc.parallelize([("a", 1),("b", 1), ("a", 2), ("b", 2), ("a", 3)])
+
+print(rdd.groupBy(lambda x: x[0]).collect())
+print(rdd.groupBy(lambda x: x[0]).map(lambda x: (x[0], list(x[1]))).collect())
 
 # COMMAND ----------
 
