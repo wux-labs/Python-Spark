@@ -489,23 +489,23 @@ print(rdd1.intersection(rdd2).collect())
 # MAGIC 
 # MAGIC 语法：
 # MAGIC ```
-# MAGIC rdd.sortBy(func, ascending=False, numPartitions=1)
+# MAGIC rdd.sortBy(func, ascending=True, numPartitions=None)
 # MAGIC 
 # MAGIC # func 函数
 # MAGIC # 函数要求传入一个参数，返回一个返回值
 # MAGIC # sortBy根据函数的返回值，将RDD的元素进行排序
 # MAGIC # ascending：True升序，Flase降序
-# MAGIC # numPartitions：排序的分区数
+# MAGIC # numPartitions：排序后的分区数
 # MAGIC ```
 
 # COMMAND ----------
 
-rdd = sc.parallelize([0,1,2,3,4,5,6,7,8,9],3)
+rdd = sc.parallelize([0,1,3,7,4,5,8,2,6,9])
 
-print(rdd.sortBy(lambda x: x).collect())
-print(rdd.sortBy(lambda x: x, False).collect())
-print(rdd.sortBy(lambda x: x % 3, False).collect())
-print(rdd.sortBy(lambda x: x % 3, False, 3).collect())
+print(rdd.sortBy(lambda x: x).glom().collect())
+print(rdd.sortBy(lambda x: x, False).glom().collect())
+print(rdd.sortBy(lambda x: x % 3, False).glom().collect())
+print(rdd.sortBy(lambda x: x % 3, False, 3).glom().collect())
 
 # COMMAND ----------
 
@@ -528,9 +528,9 @@ print(rdd.sortBy(lambda x: x % 3, False, 3).collect())
 
 rdd = sc.parallelize([("a", 1), ("b", 1), ("a", 3), ("c", 4), ("b", 2), ("a", 2)])
 
-print(rdd.sortByKey().collect())
-print(rdd.sortByKey(False).collect())
-print(rdd.sortByKey(False, 2).collect())
+print(rdd.sortByKey().glom().collect())
+print(rdd.sortByKey(False).glom().collect())
+print(rdd.sortByKey(False, 2).glom().collect())
 
 # COMMAND ----------
 
