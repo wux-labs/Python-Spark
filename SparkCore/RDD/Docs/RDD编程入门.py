@@ -575,6 +575,15 @@ print(rdd.zip(sc.parallelize(["a","b","c","d"])).collect())
 
 # COMMAND ----------
 
+# MAGIC %scala
+# MAGIC 
+# MAGIC val rdd1 = sc.parallelize(List(1,2,3,4))
+# MAGIC val rdd2 = sc.parallelize(List("a","b","c","d","e"))
+# MAGIC 
+# MAGIC println(rdd1.zip(rdd2).collect())
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC #### zipWithIndex 算子
 # MAGIC 
@@ -621,7 +630,7 @@ print(rdd.zipWithUniqueId().collect())
 # MAGIC rdd.partitionBy(numPartitions, partitionFunc)
 # MAGIC 
 # MAGIC # numPartitions：重新分区后的分区数
-# MAGIC # partitionFunc：自定义分区规则，返回的是整数类型的分区编号，取值范围: [0, numPartitions - 1]，返回值不在这个取值范围的，默认都放0分区
+# MAGIC # partitionFunc：自定义分区规则，返回的是整数类型的分区编号，取值范围: [0, numPartitions - 1]，返回值不在这个取值范围的，默认都放最后一个分区
 # MAGIC ```
 
 # COMMAND ----------
@@ -631,8 +640,9 @@ rdd = sc.parallelize(["a","b","c","d","e","f"]).zipWithIndex()
 print(rdd.glom().collect())
 
 def partition_func(key):
-    if key <= "c": return 1
-    if key <= "e": return 2
+    if key <= "b": return 1
+    if key <= "d": return 2
+    if key >= "f": return 5
     return 0
 
 print(rdd.partitionBy(3,partition_func).glom().collect())
