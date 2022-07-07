@@ -853,8 +853,11 @@ print(sc.parallelize(range(1,101),2).fold(5, lambda a,b: a + b))
 # 初始值 + 分区1的聚合结果（初始值 + 分区元素的聚合结果） + 分区2的聚合结果（初始值 + 分区元素的聚合结果） + 分区3的聚合结果（初始值 + 分区元素的聚合结果） = 5 + (5 + x1) + (5 + x2) + (5 + x3) = 5070
 print(sc.parallelize(range(1,101),3).fold(5, lambda a,b: a + b))
 # 由于我们的CPU是4个，所以默认是4个分区，结果就是 5075
-print(sc.parallelize(range(1,101)).fold(5, lambda a,b: a + b))
+print(sc.parallelize(range(1,101),4).fold(5, lambda a,b: a + b))
 # 分区数每增加1个，最终聚合的结果就增加一个初始值
+print(sc.parallelize(range(1,101)).fold(5, lambda a,b: a + b))
+print(sc.parallelize(range(1,101)).glom().collect())
+print(sc.parallelize(range(1,101)).getNumPartitions())
 
 # COMMAND ----------
 
@@ -968,10 +971,10 @@ print(sc.parallelize(["a","b","c","e","f","g"],1).takeSample(False,5, 2))
 # MAGIC 
 # MAGIC 语法：
 # MAGIC ```
-# MAGIC rdd.takeSample(num, key=None)
+# MAGIC rdd.takeOrdered(num, func)
 # MAGIC 
-# MAGIC # num：抽样数目
-# MAGIC # key：排序数据
+# MAGIC # num：需要取出的元素个数
+# MAGIC # func：排序规则
 # MAGIC ```
 
 # COMMAND ----------
