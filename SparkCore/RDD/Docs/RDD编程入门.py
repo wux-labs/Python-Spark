@@ -1000,7 +1000,7 @@ print(sc.parallelize(["aaa", "eee", "ff", "bbbbb", "g", "cccc"], 1).takeOrdered(
 
 print(sc.parallelize(range(1,11),1).map(lambda x: x * 2))
 print(sc.parallelize(range(1,11),1).map(lambda x: x * 2).collect())
-print(sc.parallelize(range(1,11),1).foreach(lambda x: x * 2))
+print(sc.parallelize(range(1,11),1).foreach(lambda x: print(x, '-->', x * 2)))
 
 # COMMAND ----------
 
@@ -1026,9 +1026,9 @@ rdd.foreachPartition(lambda x: print(type(x), list(x)))
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC #### saveAsText 算子
+# MAGIC #### saveAsTextFile 算子
 # MAGIC 
-# MAGIC saveAsText算子，将RDD的数据写入文本文件中。支持写到本地、分布式文件系统等，每个分区写一个子文件。
+# MAGIC saveAsTextFile算子，将RDD的数据写入文本文件中。支持写到本地、分布式文件系统等，每个分区写一个子文件。
 # MAGIC 
 # MAGIC 语法：
 # MAGIC ```
@@ -1064,7 +1064,7 @@ rdd4.saveAsTextFile("/mnt/databrickscontainer1/partition4")
 # MAGIC 在前面的Action算子中，有几个算子：
 # MAGIC * foreach
 # MAGIC * foreachPartition
-# MAGIC * saveAsText
+# MAGIC * saveAsTextFile
 # MAGIC 
 # MAGIC 这几个算子无返回值，是分区直接执行的，跳过Driver，由Executor直接执行。
 # MAGIC 
