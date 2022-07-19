@@ -125,7 +125,7 @@ print(result3)
 # MAGIC 一旦缓存丢失，可以基于血缘关系记录，重新计算这个RDD的数据。
 # MAGIC 
 # MAGIC > **缓存如何丢失：**  
-# MAGIC > 在内存中的缓存时不安全的，比如断电\内存不足，会把缓存清理掉，释放资源给计算  
+# MAGIC > 在内存中的缓存是不安全的，比如断电\内存不足，会把缓存清理掉，释放资源给计算  
 # MAGIC > 硬盘中的数据也有可能因硬盘损坏而丢失
 # MAGIC 
 # MAGIC RDD的数据是按照分区，分别缓存到Executor的内存或硬盘，是分散缓存的。
@@ -145,7 +145,7 @@ print(result3)
 # MAGIC 
 # MAGIC 一般将CheckPoint的数据保存到HDFS上，这样数据就比较安全了。
 # MAGIC 
-# MAGIC CheckPoint不会立即执行，需要先执行Action，并且CheckPoint在代码中需要放到Action之前。
+# MAGIC CheckPoint不会立即执行，需要先执行Action，**并且CheckPoint在代码中需要放到Action之前**。
 
 # COMMAND ----------
 
@@ -250,7 +250,7 @@ rdd3 = rdd2.map(lambda x: (x[0], x[1], datetime.datetime.now().strftime("%Y-%m-%
 
 # 放在Action之前，看看后续RDD的Action的结果，体会一下Cache与CheckPoint的持久化效果
 # rdd3.cache()
-rdd3.checkpoint()
+# rdd3.checkpoint()
 
 time.sleep(5)
 result1 = rdd3.collect()
@@ -259,7 +259,7 @@ print(result1)
 print(result1)
 
 # 放在Action之后，看看后续RDD的Action的结果，体会一下Cache与CheckPoint的持久化效果
-# rdd3.cache()
+rdd3.cache()
 # rdd3.checkpoint()
 
 time.sleep(5)
