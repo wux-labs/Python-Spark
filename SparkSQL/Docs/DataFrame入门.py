@@ -358,6 +358,10 @@ spark.read.orc("/mnt/databrickscontainer1/restaurant-1-orders-orc").show()
 
 # MAGIC %md
 # MAGIC ##### avro
+# MAGIC 
+# MAGIC * 不支持将 read.format("avro").load(path) 合并为 read.avro(path)
+# MAGIC * 需要使用spark-submit进行提交运行
+# MAGIC > spark-submit --packages org.apache.spark:spark-avro_2.12:3.2.1 --name readAvro --master yarn readAvro.py
 
 # COMMAND ----------
 
@@ -416,7 +420,11 @@ df.show(truncate=False)
 
 # COMMAND ----------
 
-spark.read.format("jdbc").option("url","jdbc:mysql://wux-mysql.mysql.database.azure.com:3306/spark?useSSL=true&requireSSL=false").option("user","wux_labs@wux-mysql").option("password","Pa55w.rd").option("query","select * from spark_read_test").load().show()
+df = spark.read.format("jdbc").option("url","jdbc:mysql://wux-mysql.mysql.database.azure.com:3306/spark?useSSL=true&requireSSL=false").option("user","wux_labs@wux-mysql").option("password","Pa55w.rd").option("query","select * from spark_read_test").load()
+
+print(type(df))
+df.printSchema()
+df.show(truncate=False)
 
 # COMMAND ----------
 
