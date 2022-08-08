@@ -106,6 +106,8 @@ ssc.stop()
 # MAGIC ### 套接字
 # MAGIC 
 # MAGIC 可以使用 ssc.socketTextStream(...) 从通过TCP套接字连接接收的文本数据创建DStream。
+# MAGIC 
+# MAGIC > nc -lk 5555
 
 # COMMAND ----------
 
@@ -113,7 +115,8 @@ from pyspark.streaming import StreamingContext
 
 ssc = StreamingContext(sc, 10)
 
-lines = ssc.socketTextStream("localhost", 5555)
+# lines = ssc.socketTextStream("localhost", 5555)
+lines = ssc.socketTextStream("20.187.99.126", 5555)
 
 words = lines.flatMap(lambda x: x.split(" ")).map(lambda x: (x, 1)).reduceByKey(lambda a,b: a + b)
 
@@ -177,7 +180,127 @@ ssc.stop()
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC 
+# MAGIC #### Ubuntu20.04下Kafka安装与部署
+# MAGIC 
+# MAGIC ```
+# MAGIC sudo apt-get update
+# MAGIC ```
+# MAGIC 
+# MAGIC ##### 安装JDK
+# MAGIC 
+# MAGIC ```
+# MAGIC sudo apt install openjdk-8-jdk
+# MAGIC ```
+# MAGIC 
+# MAGIC ##### 下载Kafka
+# MAGIC 
+# MAGIC ```
+# MAGIC wget https://dlcdn.apache.org/kafka/3.1.0/kafka_2.12-3.1.0.tgz
+# MAGIC ```
+# MAGIC 
+# MAGIC ##### 安装Kafka
+# MAGIC 
+# MAGIC ###### 解压
+# MAGIC 
+# MAGIC ```
+# MAGIC mkdir apps
+# MAGIC tar -xzf kafka_2.12-3.1.0.tgz -C apps/
+# MAGIC ```
+# MAGIC 
+# MAGIC ###### 配置
+# MAGIC 
+# MAGIC ```
+# MAGIC vi apps/kafka_2.12-3.1.0/config/zookeeper.properties
+# MAGIC vi apps/kafka_2.12-3.1.0/config/server.properties
+# MAGIC ```
+# MAGIC 
+# MAGIC ###### 启动
+# MAGIC 
+# MAGIC ```
+# MAGIC cd apps/kafka_2.12-3.1.0
+# MAGIC 
+# MAGIC bin/zookeeper-server-start.sh -daemon config/zookeeper.properties
+# MAGIC 
+# MAGIC bin/kafka-server-start.sh -daemon config/server.properties
+# MAGIC ```
+# MAGIC 
+# MAGIC ##### 使用Kafka
+# MAGIC 
+# MAGIC ###### 创建Topic
+# MAGIC 
+# MAGIC ```
+# MAGIC bin/kafka-topics.sh --create --topic KafkaFirstTopic --partitions 1 --replication-factor 1 --bootstrap-server 10.0.0.4:9092
+# MAGIC 
+# MAGIC bin/kafka-topics.sh --list --bootstrap-server 10.0.0.4:9092
+# MAGIC ```
+# MAGIC 
+# MAGIC ###### 发送消息
+# MAGIC 
+# MAGIC ```
+# MAGIC bin/kafka-console-producer.sh --bootstrap-server 10.0.0.4:9092 --topic KafkaFirstTopic
+# MAGIC ```
+# MAGIC 
+# MAGIC ###### 消费消息
+# MAGIC 
+# MAGIC ```
+# MAGIC bin/kafka-console-consumer.sh --bootstrap-server 10.0.0.4:9092 --topic KafkaFirstTopic
+# MAGIC ```
+
+# COMMAND ----------
+
 from pyspark.streaming.kafka import KafkaUtils
+
+
+# COMMAND ----------
+
+# MAGIC %sh
+# MAGIC 
+# MAGIC echo "20.187.99.126 wux-virtual-machine.internal.cloudapp.net" >> /etc/hosts
+# MAGIC cat /etc/hosts
+
+# COMMAND ----------
+
+# MAGIC %scala
+# MAGIC import org.apache.spark._
+# MAGIC import org.apache.spark.streaming._
+# MAGIC import org.apache.spark.streaming.StreamingContext._
+# MAGIC import org.apache.spark.streaming.kafka010._
+# MAGIC import org.apache.spark.streaming.kafka010.LocationStrategies.PreferConsistent
+# MAGIC import org.apache.spark.streaming.kafka010.ConsumerStrategies.Subscribe
+# MAGIC 
+# MAGIC import org.apache.kafka.clients.consumer.ConsumerRecord
+# MAGIC import org.apache.kafka.common.serialization.StringDeserializer
+# MAGIC 
+# MAGIC val ssc = new StreamingContext(sc,Seconds(10))
+# MAGIC 
+# MAGIC val kafkaParams = Map[String, Object](
+# MAGIC   "bootstrap.servers" -> "20.187.99.126:9092",
+# MAGIC   "key.deserializer" -> classOf[StringDeserializer],
+# MAGIC   "value.deserializer" -> classOf[StringDeserializer],
+# MAGIC   "group.id" -> "databricks_kafka_group",
+# MAGIC   "auto.offset.reset" -> "latest",
+# MAGIC   "enable.auto.commit" -> (false: java.lang.Boolean)
+# MAGIC )
+# MAGIC 
+# MAGIC val topics = Array("KafkaFirstTopic")
+# MAGIC val stream = KafkaUtils.createDirectStream[String, String](
+# MAGIC   ssc,
+# MAGIC   PreferConsistent,
+# MAGIC   Subscribe[String, String](topics, kafkaParams)
+# MAGIC )
+# MAGIC 
+# MAGIC // stream.map(record => (record.key, record.value)).reduceByKey(_+_).print()
+# MAGIC stream.flatMap(x => x.value.toString().split(" ")).map((_,1)).reduceByKey(_+_).print()
+# MAGIC 
+# MAGIC ssc.start()
+# MAGIC ssc.awaitTermination()
+
+# COMMAND ----------
+
+# MAGIC %scala
+# MAGIC ssc.stop()
 
 # COMMAND ----------
 
