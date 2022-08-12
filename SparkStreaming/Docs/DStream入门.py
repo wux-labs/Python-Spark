@@ -328,6 +328,121 @@ from pyspark.streaming.kafka import KafkaUtils
 # COMMAND ----------
 
 # MAGIC %md
+# MAGIC ### map
+# MAGIC 
+# MAGIC 是将DStream的数据一条一条处理，处理的逻辑是基于map算子中接收的处理函数的，返回新的DStream（TransformedDStream）。
+
+# COMMAND ----------
+
+from pyspark.streaming import StreamingContext
+import time
+
+ssc = StreamingContext(sc, 10)
+
+# 定义一个队列
+rddQueue = [ssc.sparkContext.parallelize([j for j in range(1, 1001)], 10)]
+
+# 往队列中写入数据
+for i in range(5):
+    rddQueue += [ssc.sparkContext.parallelize([j for j in range(1, 1001)], 10)]
+
+lines = ssc.queueStream(rddQueue)
+
+# DStream
+print(type(lines))
+
+words = lines.map(lambda x: (x % 10, 1))
+
+# TransformedDStream
+print(type(words))
+words.pprint()
+
+# ssc.start()
+
+# ssc.awaitTermination()
+
+# COMMAND ----------
+
+ssc.stop()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### filter
+# MAGIC 
+# MAGIC 筛选满足条件的数据，返回新的DStream（TransformedDStream）。
+
+# COMMAND ----------
+
+from pyspark.streaming import StreamingContext
+import time
+
+ssc = StreamingContext(sc, 10)
+
+# 定义一个队列
+rddQueue = [ssc.sparkContext.parallelize([j for j in range(1, 1001)], 10)]
+
+# 往队列中写入数据
+for i in range(5):
+    rddQueue += [ssc.sparkContext.parallelize([j for j in range(1, 1001)], 10)]
+
+lines = ssc.queueStream(rddQueue)
+
+# DStream
+print(type(lines))
+
+words = lines.filter(lambda x: x % 5 == 0)
+
+# TransformedDStream
+print(type(words))
+words.pprint()
+
+ssc.start()
+
+ssc.awaitTermination()
+
+# COMMAND ----------
+
+ssc.stop()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### reduceByKey
+# MAGIC 
+# MAGIC 针对K-V型DStream，自动按照K分组，然后根据提供的聚合逻辑，完成组内数据的聚合操作，返回新的DStream（TransformedDStream）。
+
+# COMMAND ----------
+
+from pyspark.streaming import StreamingContext
+import time
+
+ssc = StreamingContext(sc, 10)
+
+# 定义一个队列
+rddQueue = [ssc.sparkContext.parallelize([j for j in range(1, 1001)], 10)]
+
+# 往队列中写入数据
+for i in range(5):
+    rddQueue += [ssc.sparkContext.parallelize([j for j in range(1, 1001)], 10)]
+
+lines = ssc.queueStream(rddQueue)
+
+words = lines.map(lambda x: (x % 10, 1)).reduceByKey(lambda a,b: a + b)
+
+words.pprint()
+
+ssc.start()
+
+ssc.awaitTermination()
+
+# COMMAND ----------
+
+ssc.stop()
+
+# COMMAND ----------
+
+# MAGIC %md
 # MAGIC ### updateStateByKey
 # MAGIC 
 # MAGIC updateStateByKey操作允许您保持任意状态，同时不断使用新信息对其进行更新。要使用它，您必须执行两个步骤。
@@ -343,10 +458,12 @@ from pyspark.streaming import StreamingContext
 def updateFunction(newValues, runningCount):
     if runningCount is None:
         runningCount = 0
+    if len(newValues) == 2:
+        return None
     return sum(newValues, runningCount)
 
 ssc = StreamingContext(sc, 10)
-ssc.checkpoint("/mnt/databrickscontainer1/SparkStreaming/checkpoint/")
+ssc.checkpoint("/mnt/databrickscontainer1/checkpoint/")
 
 lines = ssc.textFileStream("/mnt/databrickscontainer1/SparkStreaming")
 
@@ -365,3 +482,524 @@ ssc.awaitTermination()
 # COMMAND ----------
 
 ssc.stop()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### join
+# MAGIC 
+# MAGIC 对两个RDD执行JOIN操作（可实现SQL的内、外连接）。
+
+# COMMAND ----------
+
+from pyspark.streaming import StreamingContext
+
+ssc = StreamingContext(sc, 10)
+
+rdd = ssc.sparkContext.parallelize([("value%s" % j, j) for j in range(1, 11)])
+
+# 定义一个队列
+rddQueue1 = [rdd]
+
+for i in range(2,10):
+    rddQueue1 += [ssc.sparkContext.parallelize([("value%s" % (i * j),i * j) for j in range(1, 11)])]
+    
+rdd1 = ssc.queueStream(rddQueue1)
+
+# 定义一个队列
+rddQueue2 = [rdd]
+
+for i in range(2,10):
+    rddQueue2 += [ssc.sparkContext.parallelize([("value%s" % (i * j),i * j) for j in range(6, 16)])]
+    
+rdd2 = ssc.queueStream(rddQueue2)
+
+# COMMAND ----------
+
+# 单个流执行没有问题
+rdd1.pprint()
+rdd2.pprint()
+
+ssc.start()
+ssc.awaitTermination()
+
+# COMMAND ----------
+
+ssc.stop()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #### inner join
+
+# COMMAND ----------
+
+rdd1.join(rdd2).pprint()
+
+ssc.start()
+ssc.awaitTermination()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC 
+# MAGIC #### left outer join
+
+# COMMAND ----------
+
+rdd1.leftOuterJoin(rdd2).pprint()
+
+ssc.start()
+ssc.awaitTermination()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC 
+# MAGIC #### right outer join
+
+# COMMAND ----------
+
+rdd1.rightOuterJoin(rdd2).pprint()
+
+ssc.start()
+ssc.awaitTermination()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC 
+# MAGIC #### full outer join
+
+# COMMAND ----------
+
+rdd1.fullOuterJoin(rdd2).pprint()
+
+ssc.start()
+ssc.awaitTermination()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC 
+# MAGIC #### 存在一个小问题
+# MAGIC 
+# MAGIC DStream不能直接与普通的RDD进行Join
+
+# COMMAND ----------
+
+# 'RDD' object has no attribute '_jdstream'
+rdd1.join(rdd).pprint()
+
+ssc.start()
+ssc.awaitTermination()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### transform
+# MAGIC 
+# MAGIC transform操作允许在DStream上应用任意 RDD 到 RDD 的函数。它可以用于处理没有在DStream API公布的RDD操作，这提供了很大的灵活性。
+
+# COMMAND ----------
+
+from pyspark.streaming import StreamingContext
+
+ssc = StreamingContext(sc, 10)
+
+rdd = ssc.sparkContext.parallelize([("value%s" % j, j) for j in range(1, 11)])
+
+# 定义一个队列
+rddQueue1 = [rdd]
+
+for i in range(2,10):
+    rddQueue1 += [ssc.sparkContext.parallelize([("value%s" % (i * j),i * j) for j in range(1, 11)])]
+    
+rdd1 = ssc.queueStream(rddQueue1)
+
+# 通过transform将DStream中的元素与RDD进行join
+rdd1.transform(lambda rd1: rd1.fullOuterJoin(rdd)).pprint()
+
+ssc.start()
+ssc.awaitTermination()
+
+# COMMAND ----------
+
+ssc.stop()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### window
+# MAGIC 
+# MAGIC Spark流式处理还提供窗口计算，允许在滑动数据窗口上应用转换。
+# MAGIC 
+# MAGIC ![](https://spark.apache.org/docs/3.2.1/img/streaming-dstream-window.png)
+# MAGIC 
+# MAGIC 每次窗口在源DStream上滑动时，落在窗口内的源RDD都会被组合并对其进行操作，以生成窗口DStream的RDD。
+# MAGIC 
+# MAGIC 任何窗口操作都需要指定两个参数。
+# MAGIC 
+# MAGIC * window length - 窗口的持续时间（图中为 3）。
+# MAGIC * sliding interval - 执行窗口操作的间隔（图中为 2）。
+# MAGIC 
+# MAGIC >这两个参数必须是源DStream的批处理间隔的倍数
+# MAGIC 
+# MAGIC | Transformation                                               | Meaning                                                      |
+# MAGIC | :----------------------------------------------------------- | :----------------------------------------------------------- |
+# MAGIC | **window**(*windowLength*, *slideInterval*)                  | Return a new DStream which is computed based on windowed batches of the source DStream. |
+# MAGIC | **countByWindow**(*windowLength*, *slideInterval*)           | Return a sliding window count of elements in the stream.     |
+# MAGIC | **reduceByWindow**(*func*, *windowLength*, *slideInterval*)  | Return a new single-element stream, created by aggregating elements in the stream over a sliding interval using *func*. The function should be associative and commutative so that it can be computed correctly in parallel. |
+# MAGIC | **reduceByKeyAndWindow**(*func*, *windowLength*, *slideInterval*, [*numTasks*]) | When called on a DStream of (K, V) pairs, returns a new DStream of (K, V) pairs where the values for each key are aggregated using the given reduce function *func* over batches in a sliding window. **Note:** By default, this uses Spark's default number of parallel tasks (2 for local mode, and in cluster mode the number is determined by the config property `spark.default.parallelism`) to do the grouping. You can pass an optional `numTasks` argument to set a different number of tasks. |
+# MAGIC | **reduceByKeyAndWindow**(*func*, *invFunc*, *windowLength*, *slideInterval*, [*numTasks*]) | A more efficient version of the above `reduceByKeyAndWindow()` where the reduce value of each window is calculated incrementally using the reduce values of the previous window. This is done by reducing the new data that enters the sliding window, and “inverse reducing” the old data that leaves the window. An example would be that of “adding” and “subtracting” counts of keys as the window slides. However, it is applicable only to “invertible reduce functions”, that is, those reduce functions which have a corresponding “inverse reduce” function (taken as parameter *invFunc*). Like in `reduceByKeyAndWindow`, the number of reduce tasks is configurable through an optional argument. Note that [checkpointing](https://spark.apache.org/docs/3.2.1/streaming-programming-guide.html#checkpointing) must be enabled for using this operation. |
+# MAGIC | **countByValueAndWindow**(*windowLength*, *slideInterval*, [*numTasks*]) | When called on a DStream of (K, V) pairs, returns a new DStream of (K, Long) pairs where the value of each key is its frequency within a sliding window. Like in `reduceByKeyAndWindow`, the number of reduce tasks is configurable through an optional argument. |
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC 
+# MAGIC #### countByWindow
+# MAGIC 
+# MAGIC 返回流中元素的滑动窗口中元素的个数。
+# MAGIC 
+# MAGIC 参数：
+# MAGIC * windowLength  - 窗口的持续时间
+# MAGIC * slideInterval - 执行窗口操作的间隔
+
+# COMMAND ----------
+
+from pyspark.streaming import StreamingContext
+
+ssc = StreamingContext(sc, 10)
+ssc.checkpoint("/mnt/databrickscontainer1/checkpoint/")
+
+rdd = ssc.sparkContext.parallelize([("value%s" % j, j) for j in range(1, 11)])
+
+# 定义一个队列
+rddQueue1 = [rdd]
+
+for i in range(2,10):
+    rddQueue1 += [ssc.sparkContext.parallelize([("value%s" % (i * j),i * j) for j in range(1, 11)])]
+    
+rdd1 = ssc.queueStream(rddQueue1)
+
+# rdd1.count().pprint()
+# rdd1.countByWindow(Seconds(30), Seconds(10)).pprint()
+rdd1.countByWindow(30, 10).pprint()
+
+ssc.start()
+ssc.awaitTermination()
+
+# COMMAND ----------
+
+ssc.stop()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC 
+# MAGIC #### reduceByKeyAndWindow
+# MAGIC 
+# MAGIC 当在(K,V)型的DStream上调用时，返回一个新的(K,V)型的DStream，其中每个键的值在滑动窗口中使用给定的reduce函数func对批次进行聚合。
+# MAGIC 
+# MAGIC 几个重要的参数：
+# MAGIC 
+# MAGIC * func - 聚合函数
+# MAGIC * invFunc - 反向函数（就是用于处理从上一个窗口到当前窗口的过程中从窗口中移除出去的数据的）
+# MAGIC * windowLength  - 窗口的持续时间
+# MAGIC * slideInterval - 执行窗口操作的间隔
+# MAGIC * [numTasks]
+# MAGIC 
+# MAGIC > 注意：  
+# MAGIC > 默认情况下，这使用Spark的默认并行任务数（本地模式为2，集群模式下由配置属性Spark.default.parallelism确定）进行分组。可以传递可选的numTasks参数来设置不同数量的任务。
+
+# COMMAND ----------
+
+from pyspark.streaming import StreamingContext
+
+ssc = StreamingContext(sc, 10)
+ssc.checkpoint("/mnt/databrickscontainer1/checkpoint/")
+
+rdd = ssc.sparkContext.parallelize([("value%s" % j, j) for j in range(1, 11)])
+
+# 定义一个队列
+rddQueue1 = [rdd]
+
+for i in range(2,10):
+    rddQueue1 += [ssc.sparkContext.parallelize([("value%s" % j, j) for j in range(1, 11)])]
+    
+rdd1 = ssc.queueStream(rddQueue1)
+
+# rdd1.reduceByKey(lambda a,b: a + b).pprint()
+
+# rdd1.reduceByKeyAndWindow(lambda a, b: a + b, Seconds(30), Seconds(10)).pprint()
+# rdd1.reduceByKeyAndWindow(lambda a, b: a + b, 30, 10).pprint()
+
+# rdd1.reduceByKeyAndWindow(lambda a, b: a + b, lambda x, y: x - y, Seconds(30), Seconds(10)).pprint()
+rdd1.reduceByKeyAndWindow(lambda a, b: a + b, lambda x, y: x - y, 30, 10).pprint()
+
+ssc.start()
+ssc.awaitTermination()
+
+# COMMAND ----------
+
+ssc.stop()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## DStream上的输出操作
+# MAGIC 
+# MAGIC 输出操作允许将DStream的数据推送到外部系统，比如数据库或文件系统。由于输出操作实际上允许外部系统使用转换后的数据，因此它们会触发执行所有DStream转换（类似于RDD的Action）。
+# MAGIC 
+# MAGIC | Output Operation                            | Meaning                                                      |
+# MAGIC | :------------------------------------------ | :----------------------------------------------------------- |
+# MAGIC | **print**()                                 | Prints the first ten elements of every batch of data in a DStream on the driver node running the streaming application. This is useful for development and debugging. **Python API** This is called **pprint()** in the Python API. |
+# MAGIC | **saveAsTextFiles**(*prefix*, [*suffix*])   | Save this DStream's contents as text files. The file name at each batch interval is generated based on *prefix* and *suffix*: *"prefix-TIME_IN_MS[.suffix]"*. |
+# MAGIC | **saveAsObjectFiles**(*prefix*, [*suffix*]) | Save this DStream's contents as `SequenceFiles` of serialized Java objects. The file name at each batch interval is generated based on *prefix* and *suffix*: *"prefix-TIME_IN_MS[.suffix]"*. **Python API** This is not available in the Python API. |
+# MAGIC | **saveAsHadoopFiles**(*prefix*, [*suffix*]) | Save this DStream's contents as Hadoop files. The file name at each batch interval is generated based on *prefix* and *suffix*: *"prefix-TIME_IN_MS[.suffix]"*. **Python API** This is not available in the Python API. |
+# MAGIC | **foreachRDD**(*func*)                      | The most generic output operator that applies a function, *func*, to each RDD generated from the stream. This function should push the data in each RDD to an external system, such as saving the RDD to files, or writing it over the network to a database. Note that the function *func* is executed in the driver process running the streaming application, and will usually have RDD actions in it that will force the computation of the streaming RDDs. |
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC 
+# MAGIC ### print / pprint
+# MAGIC 
+# MAGIC 打印DStream的前10条数据。
+
+# COMMAND ----------
+
+from pyspark.streaming import StreamingContext
+
+ssc = StreamingContext(sc, 10)
+ssc.checkpoint("/mnt/databrickscontainer1/checkpoint/")
+
+rdd = ssc.sparkContext.parallelize([("value%s" % j, j) for j in range(1, 11)])
+
+# 定义一个队列
+rddQueue1 = [rdd]
+
+for i in range(2,10):
+    rddQueue1 += [ssc.sparkContext.parallelize([("value%s" % j, j) for j in range(1, 101)])]
+    
+rdd1 = ssc.queueStream(rddQueue1)
+
+rdd1.pprint()
+
+ssc.start()
+ssc.awaitTermination()
+
+# COMMAND ----------
+
+ssc.stop()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC 
+# MAGIC ### saveAsTextFiles
+# MAGIC 
+# MAGIC 将DStream的数据保存到文本文件，每个批量间隔的数据保存一个独立的文件。
+
+# COMMAND ----------
+
+from pyspark.streaming import StreamingContext
+
+ssc = StreamingContext(sc, 10)
+ssc.checkpoint("/mnt/databrickscontainer1/checkpoint/")
+
+rdd = ssc.sparkContext.parallelize([("value%s" % j, j) for j in range(1, 11)])
+
+# 定义一个队列
+rddQueue1 = [rdd]
+
+for i in range(2,10):
+    rddQueue1 += [ssc.sparkContext.parallelize([("value%s" % j, j) for j in range(1, 101)])]
+    
+rdd1 = ssc.queueStream(rddQueue1)
+
+rdd1.saveAsTextFiles('/mnt/databrickscontainer1/SparkStreaming/output','dat')
+
+ssc.start()
+ssc.awaitTermination()
+
+# COMMAND ----------
+
+ssc.stop()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC 
+# MAGIC ### foreachRDD
+# MAGIC 
+# MAGIC foreachRDD是一个功能强大的原语，允许将数据发送到外部系统。但是，了解如何正确有效地使用此基元非常重要。
+
+# COMMAND ----------
+
+from pyspark.streaming import StreamingContext
+
+ssc = StreamingContext(sc, 10)
+ssc.checkpoint("/mnt/databrickscontainer1/checkpoint/")
+
+rdd = ssc.sparkContext.parallelize([("value%s" % j, j) for j in range(1, 11)])
+
+# 定义一个队列
+rddQueue1 = [rdd]
+
+for i in range(2,10):
+    rddQueue1 += [ssc.sparkContext.parallelize([("value%s" % j, j) for j in range(1, 101)])]
+    
+rdd1 = ssc.queueStream(rddQueue1)
+
+rdd1.foreachRDD(lambda rdd: rdd.foreachPartition(lambda partition: print(list(partition))))
+
+ssc.start()
+ssc.awaitTermination()
+
+# COMMAND ----------
+
+ssc.stop()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC 
+# MAGIC ### 注意
+# MAGIC 
+# MAGIC 官方文档提到：了解如何正确有效地使用此基元非常重要。
+# MAGIC 
+# MAGIC > [Design Patterns for using foreachRDD](https://spark.apache.org/docs/3.2.1/streaming-programming-guide.html#design-patterns-for-using-foreachrdd)  
+# MAGIC >  However, it is important to understand how to use this primitive correctly and efficiently.
+# MAGIC 
+# MAGIC 当需要将DStream的数据推送到外部系统时，比如关系型数据库，如果需要创建数据源连接：
+# MAGIC * 不要在Driver端创建连接，因为可能出现序列化反序列化失败的问题
+# MAGIC * 不要为每个RDD的数据创建一个连接，一方面会导致连接数过多，一方面创建连接的开销很大
+# MAGIC * 尽量让一次连接处理一个分区的数据
+# MAGIC * 可以使用共享连接池
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC 
+# MAGIC ## DStream上的SQL操作
+# MAGIC 
+# MAGIC 要想执行SQL操作，需要将DStream中的RDD注册成DataFrame/视图，然后才能进行SQL操作。
+
+# COMMAND ----------
+
+from pyspark.streaming import StreamingContext
+from pyspark.sql import SparkSession
+from pyspark.sql.types import StructType, StringType, IntegerType
+
+ssc = StreamingContext(sc, 10)
+ssc.checkpoint("/mnt/databrickscontainer1/checkpoint/")
+
+rdd = ssc.sparkContext.parallelize([("value%s" % j, j) for j in range(1, 11)])
+
+# 定义一个队列
+rddQueue1 = [rdd]
+
+for i in range(2,10):
+    rddQueue1 += [ssc.sparkContext.parallelize([("value%s" % j, j) for j in range(1, 101)])]
+    
+rdd1 = ssc.queueStream(rddQueue1)
+
+# SparkContext can only be used on the driver, not in code that it run on workers. For more information, see SPARK-5063.
+def getSparkSessionInstance(sparkConf):
+    if ("sparkSessionSingletonInstance" not in globals()):
+        globals()["sparkSessionSingletonInstance"] = SparkSession \
+            .builder \
+            .config(conf=sparkConf) \
+            .getOrCreate()
+    return globals()["sparkSessionSingletonInstance"]
+
+def processRDD(time, rdd):
+    print("========= %s =========" % str(time))
+    # 通过RDD创建DataFrame方式1
+    # df = spark.createDataFrame(rdd, schema=["world","value"])
+    # SparkContext can only be used on the driver, not in code that it run on workers. For more information, see SPARK-5063.
+    
+    # 通过RDD创建DataFrame方式3
+    schema = StructType().add("world", StringType(), nullable=False).add("value", IntegerType(), nullable=False)
+    df = rdd.toDF(schema)
+
+    df.createOrReplaceTempView("dstream_table")
+    # SparkContext can only be used on the driver, not in code that it run on workers. For more information, see SPARK-5063.
+    sparki = getSparkSessionInstance(rdd.context.getConf())
+    sparki.sql("select * from dstream_table").show()
+
+rdd1.foreachRDD(processRDD)
+
+ssc.start()
+ssc.awaitTermination()
+
+# COMMAND ----------
+
+ssc.stop()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC 
+# MAGIC ## DStream上的持久化
+# MAGIC 
+# MAGIC 在学习SparkCore的时候，我们知道RDD的数据是过程数据，在下一次要用到RDD的数据的时候，再根据血缘关系，从头重新处理一遍RDD的数据。RDD提供了`cache`、`persist`、`checkpoint`来进行数据的持久化。
+# MAGIC 
+# MAGIC 与RDD类似，DStream还允许开发人员将流的数据保存在内存中。
+# MAGIC 
+# MAGIC 对于基于窗口的操作（如reduceByWindow和reduceByKeyAndWindow）和基于状态的操作（如updateStateByKey），这是隐式的。因此，由基于窗口的操作生成的DStream会自动保留在内存中，而无需开发人员调用persist()。
+# MAGIC 
+# MAGIC > 与RDD不同，DStream的默认持久性级别将数据序列化在内存中。
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC 
+# MAGIC ### 检查点/Checkpoint
+# MAGIC 
+# MAGIC 流应用程序必须全天候运行，因此必须能够灵活应对与应用程序逻辑无关的故障（例如，系统故障、JVM 崩溃等）。为了实现这一点，Spark Streaming需要将足够多的信息检查点发送到容错存储系统，以便它可以从故障中恢复。
+# MAGIC 
+# MAGIC 有两种类型的数据是检查点的。
+# MAGIC 
+# MAGIC * 元数据检查点 - 将定义流计算的信息保存到HDFS等容错存储中。这用于从运行流式处理应用程序驱动程序的节点的故障中恢复。元数据包括：
+# MAGIC   * 配置 - 用于创建流式处理应用程序的配置。
+# MAGIC   * DStream操作 - 定义流式处理应用程序的DStream操作集。
+# MAGIC   * 未完成的批次 - 作业已排队但尚未完成的批次。
+# MAGIC * 数据检查点 - 将生成的RDD保存到可靠的存储。在某些跨多个批次合并数据的有状态转换中，这是必需的。在此类转换中，生成的RDD依赖于先前批次的RDD，这会导致依赖关系链的长度随着时间的推移而不断增加。为了避免恢复时间的这种无限增加（与依赖关系链成正比），有状态转换的中间RDD定期检查点到可靠存储（例如HDFS）以切断依赖链。
+# MAGIC 
+# MAGIC 总而言之，元数据检查点主要用于从驱动程序故障中恢复，而数据或RDD检查点对于基本功能（如果使用有状态转换）也是必需的。
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC 
+# MAGIC #### 何时启用检查点
+# MAGIC 必须为具有以下任何要求的应用程序启用检查点：
+# MAGIC 
+# MAGIC * 有状态转换的使用 - 如果在应用程序中使用了updateStateByKey或reduceByKeyAndWindow（具有反函数），则必须提供检查点目录以允许定期RDD检查点。
+# MAGIC * 从运行应用程序的驱动程序的故障中恢复 - 元数据检查点用于恢复进度信息。
+# MAGIC 
+# MAGIC > 请注意，无需启用检查点即可运行没有上述有状态转换的简单流式处理应用程序。在这种情况下，从驱动程序故障中恢复也将是部分的（某些已接收但未处理的数据可能会丢失）。这通常是可以接受的，许多人以这种方式运行Spark Streaming应用程序。对非Hadoop环境的支持有望在未来得到改善。
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC 
+# MAGIC #### 如何配置检查点
+# MAGIC 
+# MAGIC 可以通过在容错、可靠的文件系统（例如，HDFS、S3等）中设置一个目录来启用检查点操作，检查点信息将保存到该目录。这是通过使用streamingContext.checkpoint(checkpointDirectory)来完成的。这将允许您使用上述有状态转换。此外，如果要使应用程序从驱动程序故障中恢复，则应重写流式处理应用程序以具有以下行为。
+# MAGIC 
+# MAGIC * 当程序首次启动时，它将创建一个新的StreamingContext，设置所有流，然后调用start()。
+# MAGIC * 当程序在失败后重新启动时，它将从检查点目录中的检查点数据重新创建流文本。
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC 
+# MAGIC #### 累加器、广播变量和检查点
+# MAGIC 
+# MAGIC 累加器和广播变量无法从 Spark 流式处理中的检查点恢复。如果启用检查点并同时使用累加器或广播变量，则必须为累加器和广播变量创建延迟实例化的单一实例，以便在驱动程序失败时重新启动后可以重新实例化它们。
+# MAGIC 
+# MAGIC 请参阅完整的[源代码](https://github.com/apache/spark/blob/v3.2.1/examples/src/main/scala/org/apache/spark/examples/streaming/RecoverableNetworkWordCount.scala)。
