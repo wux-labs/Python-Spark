@@ -91,3 +91,34 @@ query.awaitTermination()
 # COMMAND ----------
 
 query.stop()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC 
+# MAGIC # 编程模型
+# MAGIC 
+# MAGIC 结构化流中的关键思想是将实时数据流视为连续追加的表。这将导致与批处理模型非常相似的新流处理模型。将流式处理计算表示为标准批处理式查询，就像在静态表上一样，Spark将其作为增量查询在未绑定的输入表上运行。
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC 
+# MAGIC ## 基本概念
+# MAGIC 
+# MAGIC 将输入数据流视为“输入表”。到达流的每个数据项都像是追加到输入表的新行。
+# MAGIC 
+# MAGIC ![](https://spark.apache.org/docs/3.2.1/img/structured-streaming-stream-as-a-table.png)
+# MAGIC 
+# MAGIC 对输入的查询将生成“结果表”。每个触发间隔（例如，1秒），新行都会追加到输入表中，最终会更新结果表。每当更新结果表时，我们都希望将更改的结果行写入外部接收器。
+# MAGIC 
+# MAGIC ![](https://spark.apache.org/docs/3.2.1/img/structured-streaming-model.png)
+# MAGIC 
+# MAGIC “输出”被定义为写出到外部存储的内容。输出可以在不同的模式下定义：
+# MAGIC * 完整模式（Complete Mode） - 整个更新的结果表将写入外部存储。由存储连接器决定如何处理整个表的写入。
+# MAGIC * 追加模式（Append Mode） - 只有自上次触发器以来在结果表中追加的新行才会写入外部存储。这仅适用于结果表中现有行不应更改的查询。
+# MAGIC * 更新模式（Update Mode） - 只有自上次触发器以来在结果表中更新的行才会写入外部存储（自 Spark 2.1.1 起可用）。请注意，这与完整模式的不同之处在于，此模式仅输出自上次触发器以来已更改的行。如果查询不包含聚合，则它将等效于追加模式。
+# MAGIC 
+# MAGIC ![](https://spark.apache.org/docs/3.2.1/img/structured-streaming-example-model.png)
+# MAGIC 
+# MAGIC > **结构化流式处理不会具体化整个表。** 它从流数据源读取最新的可用数据，以增量方式处理该数据以更新结果，然后丢弃源数据。它仅保留更新结果所需的最小中间状态数据（例如，前面示例中的中间计数）。
