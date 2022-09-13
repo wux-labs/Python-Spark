@@ -4,7 +4,8 @@
 # MAGIC 
 # MAGIC 电影评分数据集：
 # MAGIC ```
-# MAGIC u.data -- The full u data set, 100000 ratings by 943 users on 1682 items.
+# MAGIC u.data -- 
+# MAGIC The full u data set, 100000 ratings by 943 users on 1682 items.
 # MAGIC Each user has rated at least 20 movies.
 # MAGIC Users and items are numbered consecutively from 1.
 # MAGIC The data is randomly ordered.
@@ -89,7 +90,8 @@ display(df.where(df["rank"] > df.select(F.mean("rank").alias("rank")).first()["r
 
 # COMMAND ----------
 
-# df.where("rank > 3").groupBy("user_id").count().orderBy("count", ascending=False).first()["user_id"]
+print(df.where("rank > 3").groupBy("user_id").count().orderBy("count", ascending=False).first()["user_id"])
+
 display(df.where(df["user_id"] == df.where("rank > 3").groupBy("user_id").count().orderBy("count", ascending=False).first()["user_id"]).agg(F.mean("rank")))
 
 # COMMAND ----------
@@ -105,6 +107,14 @@ display(df.groupBy("user_id").agg(F.mean("rank"), F.min("rank"), F.max("rank")))
 
 # MAGIC %md
 # MAGIC * 查询被评分超过100次的电影的平均分排名前10的电影
+
+# COMMAND ----------
+
+df.groupBy("movie_id").agg(F.count("movie_id").alias("count"),F.mean("rank").alias("mean_rank")).show()
+
+# COMMAND ----------
+
+df.groupBy("movie_id").agg(F.count("movie_id").alias("count"),F.mean("rank").alias("mean_rank")).where("count > 100").show()
 
 # COMMAND ----------
 
@@ -147,12 +157,31 @@ df.createOrReplaceTempView("movie_rank")
 # COMMAND ----------
 
 # MAGIC %sql
+# MAGIC 
+# MAGIC select avg(rank) from movie_rank
+
+# COMMAND ----------
+
+# MAGIC %sql
 # MAGIC select movie_id,count(*) from movie_rank where rank > (select avg(rank) from movie_rank) group by movie_id
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC select count(*) from (
+# MAGIC select movie_id,count(*) from movie_rank where rank > (select avg(rank) from movie_rank) group by movie_id
+# MAGIC )
 
 # COMMAND ----------
 
 # MAGIC %md
 # MAGIC * 查询高分电影（>3）中打分次数最多的用户，并求出此人打的平均分
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC 
+# MAGIC select user_id from movie_rank where rank > 3 group by user_id order by count(1) desc limit 1
 
 # COMMAND ----------
 

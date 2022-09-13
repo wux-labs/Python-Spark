@@ -498,6 +498,8 @@ df.show(5, truncate=False)
 
 df = spark.read.format("csv").load("/mnt/databrickscontainer1/restaurant-1-orders.csv", header=True)
 
+print(type(df["Order Number"]))
+
 # 使用可变参数的Column对象
 df.select(df["Order Number"], df["Order Date"]).show()
 # 使用List[Column]对象
@@ -523,17 +525,19 @@ df.select(["Order Number", "Order Date", "Item Name", "Quantity"]).show()
 
 # COMMAND ----------
 
+df = spark.read.format("csv").load("/mnt/databrickscontainer1/restaurant-1-orders.csv", header=True)
+
 # 直接查询字段
 df.select("Quantity").show(5)
 # df.select(df["Quantity"]).show(5)
 
 # 字段的简单运算，如何实现？
-# df.select(df["Quantity"] + 2).show(5)
+df.select(df["Quantity"] + 2).show(5)
 # df.select("Quantity" + 2).show(5)
 # df.select("Quantity + 2").show(5)
 
 # 字段别名等复杂操作如何实现？
-# df.select(df["Quantity"].alias("SHULIANG")).show(5)
+df.select(df["Quantity"].alias("SHULIANG")).show(5)
 # df.select("Quantity as SHULIANG").show(5)
 
 # COMMAND ----------
@@ -545,10 +549,12 @@ df.select("Quantity").show(5)
 # 字段的简单运算，如何实现？
 # df.select(df["Quantity"] + 2).show(5)
 df.selectExpr("Quantity + 2").show(5)
+df.selectExpr("Quantity", "Quantity + 2").show(5)
 
 # 字段别名等复杂操作如何实现？
 # df.select(df["Quantity"].alias("SHULIANG")).show(5)
 df.selectExpr("Quantity as SHULIANG").show(5)
+df.selectExpr("Quantity", "Quantity as SHULIANG").show(5)
 
 # COMMAND ----------
 
@@ -563,6 +569,8 @@ df.selectExpr("Quantity as SHULIANG").show(5)
 # COMMAND ----------
 
 df = spark.read.format("csv").load("/mnt/databrickscontainer1/restaurant-1-orders.csv", header=True)
+
+df.select(df["Order Number"]).show()
 
 df.select(df["Order Number"]).distinct().show()
 
@@ -622,7 +630,7 @@ df.groupBy("Item Name").count().show()
 
 # COMMAND ----------
 
-df = spark.read.format("jdbc").option("url","jdbc:mysql://wux-mysql.mysql.database.azure.com:3306/spark?useSSL=true&requireSSL=false").option("user","wux_labs@wux-mysql").option("password","Pa55w.rd").option("query","select * from spark_read_test").load()
+df = spark.read.format("csv").load("/mnt/databrickscontainer1/restaurant-1-orders.csv", header=True)
 
 df.printSchema()
 df.show()
@@ -631,15 +639,17 @@ df.show()
 print(type(df.groupBy("Quantity")))
 
 df.groupBy("Quantity").count().show()
-df.groupBy("Item_Name").min().show()
-df.groupBy("Item_Name").max().show()
-df.groupBy("Item_Name").sum().show()
-df.groupBy("Item_Name").avg().show()
+df.groupBy("Item Name").min().show()
+df.groupBy("Item Name").max().show()
+df.groupBy("Item Name").sum().show()
+df.groupBy("Item Name").avg().show()
 
 
 # COMMAND ----------
 
-df = spark.read.parquet("/mnt/databrickscontainer1/restaurant-1-orders-parquet")
+df = spark.read.parquet("/mnt/databrickscontainer1/restaurant-1-orders.parquet")
+
+df.printSchema()
 
 df.groupBy("Quantity").count().show()
 df.groupBy("ItemName").count().show()
@@ -665,7 +675,7 @@ df.groupBy("ItemName").avg("Quantity").show()
 
 # COMMAND ----------
 
-df = spark.read.parquet("/mnt/databrickscontainer1/restaurant-1-orders-parquet")
+df = spark.read.parquet("/mnt/databrickscontainer1/restaurant-1-orders.parquet")
 
 df.show()
 
@@ -694,10 +704,12 @@ df.orderBy(["ItemName","TotalProducts"], ascending=[False,False]).show()
 
 # COMMAND ----------
 
-df = spark.read.parquet("/mnt/databrickscontainer1/restaurant-1-orders-parquet")
+df = spark.read.parquet("/mnt/databrickscontainer1/restaurant-1-orders.parquet")
 
-df.show()
-df.limit(5).show()
+df.show() # 20
+df.show(5) # 5
+
+df.limit(5).show() # 20 -> 5
 
 # COMMAND ----------
 
@@ -712,11 +724,14 @@ df.limit(5).show()
 
 # COMMAND ----------
 
-df = spark.read.parquet("/mnt/databrickscontainer1/restaurant-1-orders-parquet")
+df = spark.read.parquet("/mnt/databrickscontainer1/restaurant-1-orders.parquet")
 
 df2 = df.alias("df_name")
+
 df2.printSchema()
 df2.show()
+
+df2.select("ItemName").show()
 df2.select("df_name.ItemName").show()
 
 # COMMAND ----------
@@ -736,7 +751,7 @@ df2.select("df_name.ItemName").show()
 # COMMAND ----------
 
 from pyspark.sql.functions import col
-df = spark.read.parquet("/mnt/databrickscontainer1/restaurant-1-orders-parquet")
+df = spark.read.parquet("/mnt/databrickscontainer1/restaurant-1-orders.parquet")
 
 display(df)
 
@@ -774,13 +789,14 @@ display(df1.join(df2,[col("df1_name.OrderNumber") == col("df2_name.OrderNumber")
 
 # COMMAND ----------
 
-df = spark.read.parquet("/mnt/databrickscontainer1/restaurant-1-orders-parquet")
+df = spark.read.parquet("/mnt/databrickscontainer1/restaurant-1-orders.parquet")
 
-df.createTempView("temp_orders")
+# df.createTempView("temp_orders")
 # Temporary view 'temp_orders' already exists
 # df.createTempView("temp_orders")
 df.createOrReplaceTempView("temp_orders")
-df.createGlobalTempView("temp_orders_global")
+# df.createGlobalTempView("temp_orders_global")
+df.createOrReplaceGlobalTempView("temp_orders_global")
 
 # COMMAND ----------
 
@@ -790,6 +806,9 @@ df.createGlobalTempView("temp_orders_global")
 # COMMAND ----------
 
 spark.sql("select * from temp_orders").show()
+
+# COMMAND ----------
+
 spark.sql("select * from global_temp.temp_orders_global").show()
 
 # COMMAND ----------
@@ -799,13 +818,14 @@ spark.sql("select * from global_temp.temp_orders_global").show()
 
 # COMMAND ----------
 
-df = spark.read.parquet("/mnt/databrickscontainer1/restaurant-1-orders-parquet")
+df = spark.read.parquet("/mnt/databrickscontainer1/restaurant-1-orders.parquet")
 
 df.createTempView("orders")
+
 spark.sql("select ItemName,Quantity from orders").show()
 spark.sql("select ItemName,max(Quantity),min(Quantity),sum(Quantity) from orders group by ItemName").show()
-spark.sql("select ItemName,max(Quantity) as MaxQuantity,min(Quantity) as MinQuantity,sum(Quantity) from orders group by ItemName").show()
-spark.sql("select ItemName,Quantity,Quantity+5,Quantity*5 from orders").show()
+spark.sql("select ItemName,max(Quantity) as MaxQuantity,min(Quantity) as MinQuantity,sum(Quantity) from orders as t1 group by ItemName").show()
+spark.sql("select distinct ItemName,Quantity,Quantity+5,Quantity*5 from orders where Quantity > 20").show()
 
 # COMMAND ----------
 
@@ -848,7 +868,7 @@ import pyspark.sql.functions as F
 
 import pyspark.sql.functions as F
 
-df = spark.read.parquet("/mnt/databrickscontainer1/restaurant-1-orders-parquet")
+df = spark.read.parquet("/mnt/databrickscontainer1/restaurant-1-orders.parquet")
 
 df.printSchema()
 df.show()
@@ -886,12 +906,12 @@ spark.sql("select count(TotalProducts),max(TotalProducts),min(TotalProducts),sum
 
 import pyspark.sql.functions as F
 
-df = spark.read.parquet("/mnt/databrickscontainer1/restaurant-1-orders-parquet")
+df = spark.read.parquet("/mnt/databrickscontainer1/restaurant-1-orders.parquet")
 
 df.printSchema()
 df.show()
 
-display(df.select(F.abs("TotalProducts"), F.exp("TotalProducts"), F.sqrt("TotalProducts"), F.sin("TotalProducts"), F.cos("TotalProducts"), F.abs(F.cos("TotalProducts")), F.rand()))
+display(df.select(F.abs("TotalProducts"), F.exp("TotalProducts"), F.sqrt("TotalProducts"), F.sin("TotalProducts"), F.abs(F.sin("TotalProducts")), F.cos("TotalProducts"), F.abs(F.cos("TotalProducts")), F.rand()))
 
 display(df.select(F.round("TotalProducts"), F.round(F.cos("TotalProducts")), F.ceil("TotalProducts"), F.ceil(F.cos("TotalProducts")), F.floor("TotalProducts"), F.floor(F.cos("TotalProducts")), F.cbrt("TotalProducts")))
 
@@ -922,7 +942,7 @@ display(spark.sql("select round(TotalProducts),round(cos(TotalProducts)),ceil(To
 
 import pyspark.sql.functions as F
 
-df = spark.read.parquet("/mnt/databrickscontainer1/restaurant-1-orders-parquet")
+df = spark.read.parquet("/mnt/databrickscontainer1/restaurant-1-orders.parquet")
 
 # current_date、current_timestamp、date_add、date_sub、datediff、dayofmonth、dayofweek、dayofyear、last_day、year、month
 display(df.select(F.current_date(), F.current_timestamp(), F.date_add(F.current_date(), 5), F.date_sub(F.current_date(), 5), F.datediff(F.date_add(F.current_date(), 5), F.date_sub(F.current_date(), 5)), F.dayofmonth(F.current_date()), F.dayofweek(F.current_date()), F.dayofyear(F.current_date()), F.last_day(F.current_date()), F.year(F.current_date()), F.month(F.current_date())))
@@ -943,7 +963,7 @@ display(spark.sql("select current_date(), current_timestamp(), date_add(current_
 
 import pyspark.sql.functions as F
 
-df = spark.read.parquet("/mnt/databrickscontainer1/restaurant-1-orders-parquet")
+df = spark.read.parquet("/mnt/databrickscontainer1/restaurant-1-orders.parquet")
 
 df.where("OrderNumber = 16118").createOrReplaceTempView("orders")
 
@@ -953,7 +973,7 @@ display(spark.sql("select * from orders"))
 
 # MAGIC %sql
 # MAGIC -- 将Array数据炸裂成多行
-# MAGIC select explode(array(10,20,30)),t.* from orders t
+# MAGIC select explode(array(10,20,30,35)),t.* from orders t
 
 # COMMAND ----------
 
@@ -1036,7 +1056,7 @@ display(spark.sql("select * from taitanic"))
 
 # COMMAND ----------
 
-df = spark.read.parquet("/mnt/databrickscontainer1/restaurant-1-orders-parquet")
+df = spark.read.parquet("/mnt/databrickscontainer1/restaurant-1-orders.parquet")
 
 df.createOrReplaceTempView("orders")
 
@@ -1058,7 +1078,7 @@ spark.sql("select * from orders").show()
 
 # MAGIC %sql
 # MAGIC -- 按“项目名称”进行分组，按“订单日期”字段排序，返回分组行号
-# MAGIC select *,  row_number() over(partition by ItemName order by OrderDate desc) as rn2 from orders;
+# MAGIC select *,  row_number() over(partition by ItemName order by cast(OrderDate as date) desc) as rn2 from orders;
 
 # COMMAND ----------
 
@@ -1150,6 +1170,15 @@ udf3 = F.udf(price_add_5, DoubleType())
 
 # COMMAND ----------
 
+df = spark.read.parquet("/mnt/databrickscontainer1/restaurant-1-orders.parquet")
+
+df.createOrReplaceTempView("orders")
+
+# 先看一下原始数据
+spark.sql("select * from orders").show()
+
+# COMMAND ----------
+
 # MAGIC %sql
 # MAGIC -- 通过方式1定义的UDF的参数1可以用于SQL风格
 # MAGIC select t.*, udf1(ProductPrice) from orders t
@@ -1167,8 +1196,8 @@ df.select("ProductPrice", udf3("ProductPrice")).show()
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC -- 但是，通过方式2定义的UDF不可以用于SQL风格
-# MAGIC select t.*, udf3(ProductPrice) from orders t
+# MAGIC -- 但是，两种定义方式的返回值对应的函数名称，不可以用于SQL风格
+# MAGIC select t.*, udf2(ProductPrice), udf3(ProductPrice) from orders t
 
 # COMMAND ----------
 
@@ -1260,7 +1289,7 @@ print(dfDuplicates.count())
 # 展示有重复的数据
 dfDuplicates.groupBy(df["Order Number"], df["Item Name"], df["Quantity"], df["Total products"]).count().where("count > 1").show()
 
-# 取出重复行
+# 去除重复行
 dfDistinct = dfDuplicates.dropDuplicates()
 
 # 缓存一下
@@ -1272,6 +1301,10 @@ print(dfDistinct.count())
 # 无重复的数据
 dfDistinct.groupBy(df["Order Number"], df["Item Name"], df["Quantity"], df["Total products"]).count().where("count > 1").show()
 
+
+# COMMAND ----------
+
+display(dfDuplicates.groupBy(df["Order Number"], df["Item Name"], df["Quantity"], df["Total products"]).count().where("count > 1"))
 
 # COMMAND ----------
 
@@ -1294,15 +1327,15 @@ dfTest.dropDuplicates(["Item Name", "Order Date"]).show()
 
 # COMMAND ----------
 
-df = spark.read.parquet("/mnt/databrickscontainer1/restaurant-1-orders-parquet")
+df = spark.read.parquet("/mnt/databrickscontainer1/restaurant-1-orders.parquet")
 
 display(df)
 
 display(df.select("OrderNumber","OrderDate"))
 display(df.select("OrderNumber","OrderDate").dropDuplicates())
 
-display(df.orderBy("OrderNumber"))
-display(df.orderBy("OrderNumber").dropDuplicates(["OrderNumber"]))
+display(df.orderBy("OrderNumber","ItemName"))
+display(df.orderBy("OrderNumber","ItemName").dropDuplicates(["OrderNumber"]))
 display(df.where("OrderNumber = 10001"))
 
 # COMMAND ----------
@@ -1327,6 +1360,8 @@ df = spark.read.format("csv").load("/mnt/databrickscontainer1/taitanic_train.csv
 # 展示原始数据
 display(df)
 
+# COMMAND ----------
+
 # 只有所有字段都是null才删除
 display(df.dropna("all"))
 
@@ -1339,7 +1374,6 @@ display(df.dropna(thresh=3))
 # 泰坦尼克号数据中有空值的字段是 "Age", "Cabin", "Embarked"
 # 指定4个字段中有3个有效则保留，则会允许一个字段为null的数据留下来
 display(df.dropna(thresh=3, subset=["Sex", "Age", "Cabin", "Embarked"]))
-
 
 # COMMAND ----------
 
@@ -1415,7 +1449,7 @@ display(df.fillna({"Age": 99, "Cabin": "cabin_loss", "Embarked": "Z"}))
 
 import pyspark.sql.functions as F
 
-df = spark.read.parquet("/mnt/databrickscontainer1/restaurant-1-orders-parquet")
+df = spark.read.parquet("/mnt/databrickscontainer1/restaurant-1-orders.parquet")
 
 df.show()
 
@@ -1477,6 +1511,8 @@ display(df3)
 
 # COMMAND ----------
 
+from pyspark.sql.types import StructType, StringType
+
 schema = StructType().\
 add("OrderNumber", StringType(), nullable=False).\
 add("OrderDate", StringType(), nullable=False).\
@@ -1486,6 +1522,10 @@ add("ProductPrice", StringType(), nullable=False).\
 add("TotalProducts", StringType(), nullable=False)
 
 df = spark.read.csv("/mnt/databrickscontainer1/restaurant-1-orders.csv", schema=schema, header=True)
+
+# COMMAND ----------
+
+display(df)
 
 # COMMAND ----------
 
@@ -1505,12 +1545,12 @@ df = spark.read.csv("/mnt/databrickscontainer1/restaurant-1-orders.csv", schema=
 
 # COMMAND ----------
 
-df.select("ItemName").write.mode("overwrite").format("text").save("/mnt/databrickscontainer1/restaurant-1-orders-text")
+df.where("OrderNumber=16118").select("ItemName").write.mode("overwrite").format("text").save("/mnt/databrickscontainer1/restaurant-1-orders-text")
 
 # COMMAND ----------
 
 # 将 write.format("text").save(path) 合并为 write.text(path)
-df.select("ItemName").write.mode("overwrite").text("/mnt/databrickscontainer1/restaurant-1-orders-text")
+df.where("OrderNumber=16118").select("ItemName").write.mode("overwrite").text("/mnt/databrickscontainer1/restaurant-1-orders-text2")
 
 # COMMAND ----------
 
@@ -1519,16 +1559,16 @@ df.select("ItemName").write.mode("overwrite").text("/mnt/databrickscontainer1/re
 
 # COMMAND ----------
 
-df.write.mode("overwrite").format("csv").option("sep", ",").option("header", True).save("/mnt/databrickscontainer1/restaurant-1-orders-csv")
+df.where("OrderNumber=16118").write.mode("overwrite").format("csv").option("sep", ",").option("header", True).save("/mnt/databrickscontainer1/restaurant-1-orders-csv")
 
-df.write.mode("overwrite").format("json").save("/mnt/databrickscontainer1/restaurant-1-orders-json")
+df.where("OrderNumber=16118").write.mode("overwrite").format("json").save("/mnt/databrickscontainer1/restaurant-1-orders-json")
 
 # COMMAND ----------
 
 # 将 write.format("csv").save(path) 合并为 write.csv(path)
-df.write.mode("overwrite").csv("/mnt/databrickscontainer1/restaurant-1-orders-csv", sep=",", header=True)
+df.where("OrderNumber=16118").write.mode("overwrite").csv("/mnt/databrickscontainer1/restaurant-1-orders-csv2", sep=",", header=True)
 # 将 write.format("json").save(path) 合并为 write.json(path)
-df.write.mode("overwrite").json("/mnt/databrickscontainer1/restaurant-1-orders-json")
+df.where("OrderNumber=16118").write.mode("overwrite").json("/mnt/databrickscontainer1/restaurant-1-orders-json2")
 
 # COMMAND ----------
 
@@ -1550,9 +1590,9 @@ df.write.mode("overwrite").format("orc").save("/mnt/databrickscontainer1/restaur
 # COMMAND ----------
 
 # 将 write.format("parquet").save(path) 合并为 write.parquet(path)
-df.write.mode("overwrite").parquet("/mnt/databrickscontainer1/restaurant-1-orders-parquet")
+df.write.mode("overwrite").parquet("/mnt/databrickscontainer1/restaurant-1-orders-parquet2")
 # 将 write.format("orc").save(path) 合并为 write.orc(path)
-df.write.mode("overwrite").orc("/mnt/databrickscontainer1/restaurant-1-orders-orc")
+df.write.mode("overwrite").orc("/mnt/databrickscontainer1/restaurant-1-orders-orc2")
 
 # COMMAND ----------
 
