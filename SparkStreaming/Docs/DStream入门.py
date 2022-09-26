@@ -78,7 +78,7 @@ ssc.stop()
 # MAGIC 
 # MAGIC Spark流式处理将监视dataDirectory目录并处理在该目录中创建的任何文件。
 # MAGIC 
-# MAGIC * 可以监视一个简单的目录，例如 "hdfs://namenode:8040/logs/"。直接位于此类路径下的所有文件都将在被发现时进行处理。
+# MAGIC * 可以监视一个简单的目录，例如 "hdfs://namenode:8040/logs/"。直接位于此路径下的所有文件都将在被发现时进行处理。
 # MAGIC * 可以提供 POSIX glob 模式，例如 "hdfs://namenode:8040/logs/2017/\*" 。DStream将包含目录中与模式匹配的所有文件。也就是说：它是目录的模式，而不是目录中的文件的模式。
 # MAGIC * 所有文件必须采用相同的数据格式。
 # MAGIC * 文件根据其修改时间（而不是其创建时间）被视为时间段的一部分。

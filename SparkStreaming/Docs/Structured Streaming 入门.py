@@ -122,3 +122,11 @@ query.stop()
 # MAGIC ![](https://spark.apache.org/docs/3.2.1/img/structured-streaming-example-model.png)
 # MAGIC 
 # MAGIC > **结构化流式处理不会具体化整个表。** 它从流数据源读取最新的可用数据，以增量方式处理该数据以更新结果，然后丢弃源数据。它仅保留更新结果所需的最小中间状态数据（例如，前面示例中的中间计数）。
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC 
+# MAGIC ## 处理事件时间和延迟数据
+# MAGIC 
+# MAGIC **事件时间**是嵌入在数据本身中的时间，也就是产生增量数据的时间，而不是Spark接收增量数据的时间，这个时间体现在数据中可以作为一列存在，比如数据中存在UPDATED_TS字段表示数据被更新的时间。

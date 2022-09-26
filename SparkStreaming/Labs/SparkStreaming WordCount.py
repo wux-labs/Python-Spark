@@ -39,5 +39,12 @@ ssc.awaitTermination()
 
 # COMMAND ----------
 
+# 启动流处理
+ssc.start()
+# 阻塞当前线程，让Streaming程序一直执行
+ssc.awaitTermination()
+
+# COMMAND ----------
+
 # 停止流处理程序
 ssc.stop()
