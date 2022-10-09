@@ -2,7 +2,7 @@
 
 参考资料：[Spark Streaming - Spark 3.2.1 Documentation](https://spark.apache.org/docs/3.2.1/streaming-programming-guide.html)
 
-Spark Streaming是Spark核心API的扩展，支持实时数据流的可扩展、高吞吐量、容错流处理。数据可以从许多来源（如Kafka、Kinesis或TCP套接字）提取，并且可以使用用高级函数（如`map`、`reduce`、`join`和`window`）表示的复杂算法进行处理。最后，处理后的数据可以推送到文件系统、数据库和实时仪表板。实际上，还可以将Spark的 [机器学习](https://spark.apache.org/docs/3.2.1/ml-guide.html)和 [图形处理](https://spark.apache.org/docs/3.2.1/graphx-programming-guide.html)算法应用于数据流。
+Spark Streaming是Spark核心API的扩展，支持实时数据流的可扩展、高吞吐量、容错流处理。数据可以从许多来源（如Kafka、Kinesis或TCP套接字）提取，并且可以使用高级函数（如`map`、`reduce`、`join`和`window`）表示的复杂算法进行处理。最后，处理后的数据可以推送到文件系统、数据库和实时仪表板。实际上，还可以将Spark的 [机器学习](https://spark.apache.org/docs/3.2.1/ml-guide.html)和 [图形处理](https://spark.apache.org/docs/3.2.1/graphx-programming-guide.html)算法应用于数据流。
 
 ![image-20220505222117411](images/image-20220505222117411.png)
 
