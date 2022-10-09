@@ -116,7 +116,7 @@ from pyspark.streaming import StreamingContext
 ssc = StreamingContext(sc, 10)
 
 # lines = ssc.socketTextStream("localhost", 5555)
-lines = ssc.socketTextStream("20.187.99.126", 5555)
+lines = ssc.socketTextStream("20.187.125.128", 5555)
 
 words = lines.flatMap(lambda x: x.split(" ")).map(lambda x: (x, 1)).reduceByKey(lambda a,b: a + b)
 
@@ -176,7 +176,22 @@ ssc.stop()
 # MAGIC %md
 # MAGIC ### Kafka
 # MAGIC 
+# MAGIC 在Spark 2.x版本中，PySpark Streaming还支持Kafka模块，但是在Spark 3.x版本中，该功能被移除了。
+# MAGIC 
+# MAGIC https://spark.apache.org/docs/2.4.8/api/python/index.html
+# MAGIC 
+# MAGIC https://spark.apache.org/docs/3.0.0/api/python/index.html
+# MAGIC 
+# MAGIC https://spark.apache.org/docs/3.2.1/api/python/index.html
+# MAGIC 
+# MAGIC 我们无法直接使用Python来开发，只能使用Scala/Java。
+# MAGIC 
 # MAGIC 需要为集群安装库：`org.apache.spark:spark-streaming-kafka-0-10_2.12:3.2.1`和`org.apache.spark:spark-sql-kafka-0-10_2.12:3.2.1`
+
+# COMMAND ----------
+
+from pyspark.streaming.kafka import KafkaUtils
+
 
 # COMMAND ----------
 
@@ -197,7 +212,8 @@ ssc.stop()
 # MAGIC ##### 下载Kafka
 # MAGIC 
 # MAGIC ```
-# MAGIC wget https://dlcdn.apache.org/kafka/3.1.0/kafka_2.12-3.1.0.tgz
+# MAGIC wget https://downloads.apache.org/kafka/3.3.1/kafka_2.12-3.3.1.tgz
+# MAGIC wget https://archive.apache.org/dist/kafka/3.1.0/kafka_2.12-3.1.0.tgz
 # MAGIC ```
 # MAGIC 
 # MAGIC ##### 安装Kafka
@@ -250,15 +266,21 @@ ssc.stop()
 
 # COMMAND ----------
 
-from pyspark.streaming.kafka import KafkaUtils
-
+# MAGIC %sh
+# MAGIC 
+# MAGIC ping 104.208.105.98
 
 # COMMAND ----------
 
 # MAGIC %sh
 # MAGIC 
-# MAGIC echo "20.187.99.126 wux-virtual-machine.internal.cloudapp.net" >> /etc/hosts
 # MAGIC cat /etc/hosts
+
+# COMMAND ----------
+
+# MAGIC %sh
+# MAGIC 
+# MAGIC echo "104.208.105.98 wux-labs-vm.internal.cloudapp.net" >> /etc/hosts
 
 # COMMAND ----------
 
@@ -276,7 +298,7 @@ from pyspark.streaming.kafka import KafkaUtils
 # MAGIC val ssc = new StreamingContext(sc,Seconds(10))
 # MAGIC 
 # MAGIC val kafkaParams = Map[String, Object](
-# MAGIC   "bootstrap.servers" -> "20.187.99.126:9092",
+# MAGIC   "bootstrap.servers" -> "104.208.105.98:9092",
 # MAGIC   "key.deserializer" -> classOf[StringDeserializer],
 # MAGIC   "value.deserializer" -> classOf[StringDeserializer],
 # MAGIC   "group.id" -> "databricks_kafka_group",
@@ -301,6 +323,18 @@ from pyspark.streaming.kafka import KafkaUtils
 
 # MAGIC %scala
 # MAGIC ssc.stop()
+
+# COMMAND ----------
+
+# MAGIC %sh
+# MAGIC 
+# MAGIC jps
+
+# COMMAND ----------
+
+# MAGIC %sh
+# MAGIC 
+# MAGIC kill -9 516
 
 # COMMAND ----------
 
