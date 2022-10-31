@@ -391,9 +391,8 @@ words = lines.map(lambda x: (x % 10, 1))
 print(type(words))
 words.pprint()
 
-# ssc.start()
-
-# ssc.awaitTermination()
+ssc.start()
+ssc.awaitTermination()
 
 # COMMAND ----------
 
@@ -432,7 +431,6 @@ print(type(words))
 words.pprint()
 
 ssc.start()
-
 ssc.awaitTermination()
 
 # COMMAND ----------
@@ -479,7 +477,7 @@ ssc.stop()
 # MAGIC %md
 # MAGIC ### updateStateByKey
 # MAGIC 
-# MAGIC updateStateByKey操作允许您保持任意状态，同时不断使用新信息对其进行更新。要使用它，您必须执行两个步骤。
+# MAGIC updateStateByKey操作允许您保持任意状态，同时不断使用新信息对其进行更新，这需要chekcpoint保存历史数据。要使用它，您必须执行两个步骤。
 # MAGIC * 定义状态 - 状态可以是任意数据类型。
 # MAGIC * 定义状态更新函数 - 使用函数指定如何使用以前的状态和输入流中的新值来更新状态。
 # MAGIC 
@@ -489,6 +487,8 @@ ssc.stop()
 
 from pyspark.streaming import StreamingContext
 
+ssc = StreamingContext(sc, 10)
+
 def updateFunction(newValues, runningCount):
     if runningCount is None:
         runningCount = 0
@@ -496,7 +496,6 @@ def updateFunction(newValues, runningCount):
         return None
     return sum(newValues, runningCount)
 
-ssc = StreamingContext(sc, 10)
 ssc.checkpoint("/mnt/databrickscontainer1/checkpoint/")
 
 lines = ssc.textFileStream("/mnt/databrickscontainer1/SparkStreaming")
@@ -622,6 +621,12 @@ ssc.awaitTermination()
 
 # COMMAND ----------
 
+print(type(rdd))
+print(type(rdd1))
+print(type(rdd2))
+
+# COMMAND ----------
+
 # 'RDD' object has no attribute '_jdstream'
 rdd1.join(rdd).pprint()
 
@@ -666,7 +671,7 @@ ssc.stop()
 # MAGIC %md
 # MAGIC ### window
 # MAGIC 
-# MAGIC Spark流式处理还提供窗口计算，允许在滑动数据窗口上应用转换。
+# MAGIC Spark Streaming还提供窗口计算，允许通过滑动窗口对数据进行转换。
 # MAGIC 
 # MAGIC ![](https://spark.apache.org/docs/3.2.1/img/streaming-dstream-window.png)
 # MAGIC 
@@ -677,7 +682,7 @@ ssc.stop()
 # MAGIC * window length - 窗口的持续时间（图中为 3）。
 # MAGIC * sliding interval - 执行窗口操作的间隔（图中为 2）。
 # MAGIC 
-# MAGIC >这两个参数必须是源DStream的批处理间隔的倍数
+# MAGIC >这两个参数必须是源DStream的批处理间隔（BatchDuration）的倍数
 # MAGIC 
 # MAGIC | Transformation                                               | Meaning                                                      |
 # MAGIC | :----------------------------------------------------------- | :----------------------------------------------------------- |
