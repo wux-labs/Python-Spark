@@ -956,17 +956,21 @@ def getSparkSessionInstance(sparkConf):
 
 def processRDD(time, rdd):
     print("========= %s =========" % str(time))
-    # 通过RDD创建DataFrame方式1
-    # df = spark.createDataFrame(rdd, schema=["world","value"])
+    print(type(rdd))
+    
     # SparkContext can only be used on the driver, not in code that it run on workers. For more information, see SPARK-5063.
+    sparki = getSparkSessionInstance(rdd.context.getConf())
+    
+    # 通过RDD创建DataFrame方式1
+    # SparkContext can only be used on the driver, not in code that it run on workers. For more information, see SPARK-5063.
+    # df = spark.createDataFrame(rdd, schema=["word","value"])
+    df = sparki.createDataFrame(rdd, schema=["word","value"])
     
     # 通过RDD创建DataFrame方式3
-    schema = StructType().add("world", StringType(), nullable=False).add("value", IntegerType(), nullable=False)
+    schema = StructType().add("word", StringType(), nullable=False).add("value", IntegerType(), nullable=False)
     df = rdd.toDF(schema)
 
     df.createOrReplaceTempView("dstream_table")
-    # SparkContext can only be used on the driver, not in code that it run on workers. For more information, see SPARK-5063.
-    sparki = getSparkSessionInstance(rdd.context.getConf())
     sparki.sql("select * from dstream_table").show()
 
 rdd1.foreachRDD(processRDD)
